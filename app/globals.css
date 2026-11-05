@@ -1,39 +1,97 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   宣纸米白 / 暖墨字 / 朱砂强调 —— 与 bazi-web 同一套版式语汇的裁剪版。
-   只保留三块用得到的东西：设计令牌、矢量爻象、铜钱翻滚动画。
+   设计系统 v2 —— 雾霾蓝 · 墨 · 赭金（配一点朱砂）
+   取自参考封面：底 #9FB4BD / 墨字 #333D42 / 赭金纹样 #8A6A3A
+   用于 App 时提亮为浅雾蓝，赭金与朱砂负责"点睛"，避免全冷色滑向医院感。
+   字体策略：正文系统无衬线；卦名、标题用宋/楷，靠字形对比而非花字。
    ========================================================================== */
 
-@theme inline {
-  --color-paper: #f7f3ea;
-  --color-paper-card: #fffdf8;
-  --color-ink: #22201b;
-  --color-ink-soft: #5e5a50;
-  --color-cinnabar: #8e3a2c;
-  --color-gold: #9c7a3c;
+@theme {
+  /* 底与面 */
+  --color-paper-0: #FBFBF7;
+  --color-paper-1: #EEF2F3;
+  --color-paper-2: #E4EBED;
+  --color-paper-3: #D8E2E5;
+  --color-line: #D3DBDE;
+  --color-line-strong: #C2D0D6;
+
+  /* 墨（文字） */
+  --color-ink-900: #1F2A30;
+  --color-ink-800: #2C3A42;
+  --color-ink-700: #3B4C55;
+  --color-ink-600: #5F7278;
+  --color-ink-500: #7C9099;
+  --color-ink-400: #9BABA F;
+
+  /* 雾蓝（主色） */
+  --color-mist-300: #B7CCD4;
+  --color-mist-400: #9FB4BD;
+  --color-mist-500: #84A0AC;
+  --color-mist-600: #6E8F9C;
+  --color-mist-700: #5B7C89;
+  --color-mist-900: #3C5661;
+
+  /* 赭金（强调） */
+  --color-gold-200: #E8DAC2;
+  --color-gold-300: #C9A96F;
+  --color-gold-500: #A2833F;
+  --color-gold-600: #8A6A3A;
+
+  /* 朱砂（动爻 / 警示） */
+  --color-cinnabar-300: #D89484;
+  --color-cinnabar-500: #B4534A;
+  --color-cinnabar-600: #A8453C;
+
+  /* 黛绿（吉 / 通过） */
+  --color-jade-500: #4F7A62;
+
+  /* 字体 */
+  --font-sans-cn: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --font-song: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+  --font-kai: "Kaiti SC", "KaiTi", "STKaiti", "Songti SC", serif;
+
+  /* 圆角 */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* 动效 */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
-  --bg: #f7f3ea;
-  --surface: #fffdf8;
-  --ink: #17140f;
-  --muted: #5c5449;
-  --faint: #8c8272;
-  --line: #e0d8c9;
-  --accent: #a5342b;
-  --accent-soft: #f2e3dc;
+  /* 语义别名（写组件时用这些） */
+  --bg: #EEF2F3;
+  --bg-sunken: #E4EBED;
+  --surface: #FBFBF7;
+  --surface-raised: #FFFFFF;
+  --ink: #1F2A30;
+  --ink-soft: #5F7278;
+  --ink-faint: #7C9099;
+  --hairline: #D3DBDE;
+  --primary: #6E8F9C;
+  --primary-deep: #3C5661;
+  --accent: #8A6A3A;
+  --accent-tint: #F1E9DA;
+  --danger: #A8453C;
+  --ok: #4F7A62;
 
-  /* HexagramSvg 依赖的别名 */
+  /* 爻色：阳墨、阴蓝灰、动朱砂 */
+  --yao-yang: #1F2A30;
+  --yao-yin: #84A0AC;
+  --yao-moving: #A8453C;
+
+  /* 兼容旧令牌（既有页面还在用，S1–S3 逐步替换） */
   --yi-bg: var(--bg);
   --yi-surface: var(--surface);
   --yi-ink: var(--ink);
-  --yi-muted: var(--muted);
-  --yi-faint: var(--faint);
-  --yi-line: var(--line);
-  --yi-accent: var(--accent);
-  --yi-accent-soft: var(--accent-soft);
-
+  --yi-muted: var(--ink-soft);
+  --yi-faint: var(--ink-faint);
+  --yi-line: var(--hairline);
+  --yi-accent: var(--danger);
+  --yi-accent-soft: #F3E4E1;
 }
 
 html,
@@ -43,9 +101,54 @@ body {
 }
 
 body {
-  font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI", sans-serif;
+  font-family: var(--font-sans-cn);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* 手机端细节：安全区、禁双击缩放、滚动惯性 */
+.safe-bottom {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 细分隔线：0.5px 观感，替代卡片描边 */
+.hair-t {
+  border-top: 1px solid var(--hairline);
+}
+
+.hair-b {
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* 触控目标下限（Android 无障碍建议 ≥48dp） */
+.tap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 按压反馈：App 手感，不用 hover 依赖 */
+.press {
+  transition: transform 120ms var(--ease-out-soft), background-color 150ms ease, border-color 150ms ease,
+    color 150ms ease;
+}
+
+.press:active {
+  transform: scale(0.975);
 }
 
 input::placeholder,
@@ -197,3 +300,34 @@ textarea::placeholder {
 
 .btn.sm { padding: 9px 16px; font-size: 13.5px; }
 .btn.block { width: 100%; }
+
+/* --------------------------------------------------------------------------
+   皮肤：雾蓝（默认）/ 宣纸米（备选）
+   Tailwind 4 的 bg-* 工具类引用 var(--color-*)，所以覆盖这些变量即可整体换肤。
+   -------------------------------------------------------------------------- */
+[data-skin='paper'] {
+  --color-paper-0: #FDFCF7;
+  --color-paper-1: #F4F3EE;
+  --color-paper-2: #EAE8E0;
+  --color-paper-3: #DFDCD1;
+  --color-line: #DFD9CB;
+  --color-line-strong: #C9C1AE;
+
+  --color-ink-900: #23201A;
+  --color-ink-800: #332F27;
+  --color-ink-700: #4A4438;
+  --color-ink-600: #5E574B;
+  --color-ink-500: #7D7565;
+
+  --color-mist-300: #C6CBBE;
+  --color-mist-400: #A8B0A2;
+  --color-mist-500: #8A9686;
+  --color-mist-600: #6F7D6E;
+  --color-mist-700: #5C6A5C;
+  --color-mist-900: #3D4A3F;
+
+  --bg: #F4F3EE;
+  --bg-sunken: #EAE8E0;
+  --surface: #FDFCF7;
+  --hairline: #DFD9CB;
+}
