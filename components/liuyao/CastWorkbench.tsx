@@ -6,6 +6,7 @@ import type { CoinResult } from './types';
 import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
 import { masksOf, movingPositions, lineTitle } from '@/lib/hexagram/hex-math';
 import { lookupByMask, resolveHexagramInfo } from '@/lib/hexagram/lookup';
+import { tossLine, tossLines } from '@/lib/liuyao/random';
 import {
   advance,
   initialState as yarrowInitial,
@@ -30,6 +31,22 @@ export interface CastWorkbenchProps {
 }
 
 export type CoinFace = 2 | 3; // 2=字(阴), 3=背(阳)
+
+/** 爻值 → 三枚币面（仅用于展示；真实结果由 random.ts 的加密随机决定） */
+export function coinFacesOf(value: number): [CoinFace, CoinFace, CoinFace] {
+  switch (value) {
+    case 6:
+      return [2, 2, 2];
+    case 7:
+      return [3, 2, 2];
+    case 8:
+      return [2, 2, 3];
+    case 9:
+      return [3, 3, 3];
+    default:
+      return [2, 3, 2];
+  }
+}
 
 /** 一变四步之间的推进节奏（ms），与 l1_tk.py 的 after() 链一致 */
 const STEP_MS = 320;
@@ -134,14 +151,11 @@ export default function CastWorkbench({
   const handleToss = () => {
     if (isTossing || isComplete || disabled) return;
 
-    // 随机三枚硬币: 每枚 2 (字/阴) 或 3 (背/阳)
-    const c1: CoinFace = Math.random() < 0.5 ? 2 : 3;
-    const c2: CoinFace = Math.random() < 0.5 ? 2 : 3;
-    const c3: CoinFace = Math.random() < 0.5 ? 2 : 3;
-    const sum = (c1 + c2 + c3) as CoinResult;
+    // 三枚铜钱：密码学级随机（Web Crypto），字 2 / 背 3 各半，无模偏差
+    const sum = tossLine() as CoinResult;
 
     // 立即写入硬币与成爻数据，确保点击第 1 爻即刻跳出爻线与反馈
-    setCurrentCoins([c1, c2, c3]);
+    setCurrentCoins(coinFacesOf(sum));
     setValues((prev) => [...prev, sum]);
     setIsTossing(true);
 
@@ -155,16 +169,8 @@ export default function CastWorkbench({
   const handleQuickCast = () => {
     if (isComplete || disabled) return;
     const remaining = 6 - values.length;
-    const newVals: CoinResult[] = [...values];
-    let lastCoins: [CoinFace, CoinFace, CoinFace] = currentCoins;
-    for (let i = 0; i < remaining; i++) {
-      const c1: CoinFace = Math.random() < 0.5 ? 2 : 3;
-      const c2: CoinFace = Math.random() < 0.5 ? 2 : 3;
-      const c3: CoinFace = Math.random() < 0.5 ? 2 : 3;
-      newVals.push((c1 + c2 + c3) as CoinResult);
-      lastCoins = [c1, c2, c3];
-    }
-    setCurrentCoins(lastCoins);
+    const newVals: CoinResult[] = [...values, ...(tossLines(remaining) as CoinResult[])];
+    setCurrentCoins(coinFacesOf(newVals[newVals.length - 1]));
     setValues(newVals);
     setIsTossing(true);
     if (tossTimeoutRef.current) window.clearTimeout(tossTimeoutRef.current);

@@ -32,6 +32,7 @@ import {
 import { judgeFullBoard } from '@/lib/xct/judgeEngine';
 import { traceZhengTuiChain } from '@/lib/xct/dagTracker';
 import { ALL_TRIGRAMS, PALACE_NAMES, SIXTY_FOUR_HEXAGRAMS, XIAN_TIAN_NUMBER } from '@/lib/xct/constants';
+import { secureDigits } from '@/lib/liuyao/random';
 import { getCaseStore } from '@/lib/store';
 import { buildXctRecord } from '@/lib/cases/record';
 
@@ -188,24 +189,14 @@ export default function XiaoChengTuView() {
     setIsRolling(true);
     if (rollingIntervalRef.current) clearInterval(rollingIntervalRef.current);
     rollingIntervalRef.current = setInterval(() => {
-      setTianDiNums([
-        String(Math.floor(Math.random() * 10)),
-        String(Math.floor(Math.random() * 10)),
-        String(Math.floor(Math.random() * 10)),
-        String(Math.floor(Math.random() * 10)),
-      ]);
+      setTianDiNums(secureDigits(4) as [string, string, string, string]);
     }, 50);
   };
 
   const handleStopRolling = () => {
     if (rollingIntervalRef.current) clearInterval(rollingIntervalRef.current);
     rollingIntervalRef.current = null;
-    setTianDiNums([
-      String(Math.floor(Math.random() * 10)),
-      String(Math.floor(Math.random() * 10)),
-      String(Math.floor(Math.random() * 10)),
-      String(Math.floor(Math.random() * 10)),
-    ]);
+    setTianDiNums(secureDigits(4) as [string, string, string, string]);
     setIsRolling(false);
   };
 
