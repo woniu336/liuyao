@@ -62,3 +62,31 @@ npm run check:portability   # 运行时代码是否有 fs/node 内置、next/ima
 
 `*.workers.dev` 在国内常被阻断或很慢。真正上线应绑定自有域名（Cloudflare 代理），
 并用手机流量实测；文档里「国内访问也很流畅」的说法不可作为依据。
+
+## 七、M0 框架验证结果（2026-11-05，分支 `spike/vinext`）
+
+环境：Windows 11 · Node v26.4.0 · npm 11.17 · Next 16.3.0 · React 19.3.1 · vite 8.3.0 · vinext 1.4.3
+
+已验证：
+
+| 项目 | 结果 |
+|---|---|
+| `vinext init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none` | 生成 `vite.config.ts` + `cloudflare.config.ts`，React 升 19.3.1 |
+| `vite dev`（workerd） | `/` `/liuyao` `/xct` `/cases` 全 200；六爻起卦→排盘→保存→打开、小成图起盘→点宫全部正常，0 console error |
+| 本地 D1 | `bindings.d1({name})` + `cloudflare:workers` 的 `env.DB` 可建表/写入/查询，跨请求持久（`.cloudflare/state/v3/d1/*.sqlite`） |
+| WebCrypto | HMAC-SHA256 签名/验签、`crypto.randomUUID` 可用 |
+| `/api/read` | 指向本地 mock 上游时 SSE 逐字下发 + done 事件正常（workerd 内 fetch 流式 OK） |
+| `vite build` / `vite preview` | 构建 3.5s；生产包页面 200、客户端 hydration 正常、D1 与 SSE 均正常 |
+| 产物体积 | `.cloudflare/output` 8.2 MB（worker bundle ≈300 KB + assets），远低于 Workers 限制 |
+| 既有回路回归 | `next dev` / `next build` 在 `type: module` + React 19.3.1 下仍正常；`tsc --noEmit` 通过；22 项测试通过；`check:portability` 通过 |
+
+需要注意（M1 前要解决/确认）：
+
+1. **`.dev.vars` 没有映射进 workerd 的 `process.env`**；反而是 `bindings.text()` 文本绑定会被 nodejs_compat 映射到 `process.env`。
+   真实 secret（`cf` 的 secret）注入后 `process.env` 是否可见，需要在拿到账号后实测，再定 `getSecret()` 的写法（必要时改成 `cloudflare:workers` 的 `env`）。
+2. `vinext dev` 会打印 `eval() is not supported... React dev mode`——React 开发期警告，生产无影响。
+3. `vinext:optimize-imports` 对 `lucide-react` 部分图标跳过 barrel 优化（非报错）。
+4. 某依赖声明 Node `^26.12.0`（当前 26.4.0 可用但不在声明区间）；建议升 Node 26.12+ 或 24.x LTS。
+5. `vinext init` 在 npm 11 + 用户级 `allow-scripts=workerd` 下会报 `EALLOWSCRIPTS`；本次用 `--userconfig` 绕过。
+   正式接入时把 `allowScripts` 收进项目配置，别依赖本机 npmrc。
+6. **未做**：`vinext-cloudflare deploy`（wrangler/cf 未登录）、Cloudflare Access、真实 secret 注入。

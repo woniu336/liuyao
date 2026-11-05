@@ -17,6 +17,12 @@ npm install
 npm run dev          # 前台：http://localhost:3000
 npm run dev:bg       # 后台：日志写 logs/dev.out.log，按端口重启旧进程
 npm test             # 引擎自证 + 差分对齐（见下）
+
+# Cloudflare Workers 回路（分支 spike/vinext 验证通过；M1 起成为部署目标）
+npm run dev:vinext      # vite dev（workerd，带本地 D1 绑定）
+npm run build:vinext    # vite build
+npm run start:vinext    # vite preview（生产包本地验证）
+npm run deploy:vinext   # 需要先 cf auth login
 ```
 
 `npm run dev/build` 走 `scripts/next.mjs`：先清掉宿主进程可能泄漏进来的
