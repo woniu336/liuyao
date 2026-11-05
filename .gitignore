@@ -10,3 +10,4 @@ scratch
 next-env.d.ts
 tsconfig.tsbuildinfo
 __pycache__
+.next-desktop

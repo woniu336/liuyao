@@ -1,1 +1,0 @@
-[{"name":"generate-buildid","duration":204,"timestamp":6299266578,"id":4,"parentId":1,"tags":{"failed":true},"startTime":1793852512280,"traceId":"ad870745ee6d8ac4"},{"name":"next-build","duration":36463,"timestamp":6299230466,"id":1,"tags":{"buildMode":"default","version":"16.3.0","bundler":"turbopack","failed":true},"startTime":1793852512244,"traceId":"ad870745ee6d8ac4"}]
