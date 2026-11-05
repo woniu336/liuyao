@@ -99,7 +99,7 @@ export default function LiuyaoResult({
   const solar = formatSolarDateDisplay(boardProps.datetime_info.solar_date, boardProps.datetime_info.ganzhi);
 
   return (
-    <div className={`relative min-h-screen bg-[#F4F1E8] text-[#38423C] ${showActionBar ? 'pb-28' : 'pb-12'}`}>
+    <div className={`relative min-h-screen bg-[#F4F1E8] text-[#38423C] ${showActionBar ? 'pb-28 lg:pb-16' : 'pb-12 lg:pb-16'}`}>
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[260px] overflow-hidden opacity-80">
         <InkLandscape />
       </div>
@@ -107,7 +107,7 @@ export default function LiuyaoResult({
       <SiteHeader
         sticky
         showNav={false}
-        maxWidthClassName="max-w-[720px]"
+        maxWidthClassName="max-w-[1120px]"
         actions={
           <>
             <Link href="/cases" className={HEADER_LINK}>
@@ -132,61 +132,106 @@ export default function LiuyaoResult({
         }
       />
 
-      <main className="relative z-10 mx-auto w-full max-w-[640px] px-4 sm:px-6">
-        {/* 卦名：本卦 ⇌ 变卦 */}
-        <div className="pb-1 pt-5 text-center">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            <h1 className="font-song text-[26px] font-semibold leading-tight tracking-[0.16em] text-[#2F4438] sm:text-[32px]">
-              {boardProps.hexagram_info.base_name}
-            </h1>
-            {changedName && (
-              <>
-                <span aria-hidden className="font-song text-[15px] text-[#8E6337]">
-                  ⇌
-                </span>
-                <span className="font-song text-[21px] font-semibold tracking-[0.14em] text-[#2F4438] sm:text-[26px]">
-                  {changedName}
-                </span>
-              </>
+      <main className="relative z-10 mx-auto w-full max-w-[1120px] px-4 sm:px-6 lg:px-8">
+        {/* PC：左盘面（吸顶）＋ 右解卦；移动端仍是单列中轴 */}
+        <div className="grid gap-7 lg:grid-cols-[440px_minmax(0,1fr)] lg:items-start lg:gap-12">
+          {/* 左：卦名 + 盘面（尺寸不变：卡片 440 / 爻盘 390 基准） */}
+          <div className="lg:sticky lg:top-[86px]">
+            <div className="pb-1 pt-5 text-center lg:pt-10">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                <h1 className="font-song text-[26px] font-semibold leading-tight tracking-[0.16em] text-[#2F4438] sm:text-[32px] lg:text-[34px]">
+                  {boardProps.hexagram_info.base_name}
+                </h1>
+                {changedName && (
+                  <>
+                    <span aria-hidden className="font-song text-[15px] text-[#8E6337]">
+                      ⇌
+                    </span>
+                    <span className="font-song text-[21px] font-semibold tracking-[0.14em] text-[#2F4438] sm:text-[26px] lg:text-[28px]">
+                      {changedName}
+                    </span>
+                  </>
+                )}
+              </div>
+              <p className="mt-2 font-song text-[11.5px] tabular-nums tracking-[0.04em] text-[#7C7668] lg:text-[12.5px]">
+                公历：{solar}　·　{boardProps.datetime_info.ganzhi}
+              </p>
+              {question.trim() && (
+                <p className="mt-1.5 font-kai text-[12.5px] tracking-[0.04em] text-[#6E6A5C] lg:text-[13.5px]">
+                  「{question.trim()}」
+                </p>
+              )}
+            </div>
+
+            {/* 太极分隔 */}
+            <div aria-hidden className="my-3 flex items-center justify-center gap-3">
+              <span className="h-px w-10 bg-[#CBBFA8]/80" />
+              <span className="font-song text-[13px] text-[#8E6337]">☯</span>
+              <span className="h-px w-10 bg-[#CBBFA8]/80" />
+            </div>
+
+            {/* 盘面 */}
+            <div
+              ref={shotRef}
+              className="mx-auto w-full max-w-[440px] bg-[#FBF7EC] px-4 py-4 sm:px-5"
+              style={{
+                borderRadius: 10,
+                border: '1px solid rgba(179,160,125,0.55)',
+                boxShadow: '0 8px 24px rgba(64,69,60,0.08)',
+              }}
+            >
+              <ResponsiveBoard {...boardProps} />
+            </div>
+
+            {/* PC：动作按钮就在盘面下方（不再悬浮）；移动端见底部悬浮条 */}
+            {showActionBar && (
+              <div className="mx-auto mt-5 hidden w-full max-w-[440px] lg:block">
+                <button
+                  type="button"
+                  onClick={streaming ? () => panelRef.current?.stop() : () => panelRef.current?.start()}
+                  className={`${PRIMARY_BTN} w-full`}
+                >
+                  {streaming ? '停 止' : '解 卦'}
+                </button>
+              </div>
             )}
           </div>
-          <p className="mt-2 font-song text-[11.5px] tabular-nums tracking-[0.04em] text-[#7C7668]">
-            公历：{solar}　·　{boardProps.datetime_info.ganzhi}
-          </p>
-          {question.trim() && (
-            <p className="mt-1.5 font-kai text-[12.5px] tracking-[0.04em] text-[#6E6A5C]">「{question.trim()}」</p>
-          )}
-        </div>
 
-        {/* 太极分隔 */}
-        <div aria-hidden className="my-3 flex items-center justify-center gap-3">
-          <span className="h-px w-10 bg-[#CBBFA8]/80" />
-          <span className="font-song text-[13px] text-[#8E6337]">☯</span>
-          <span className="h-px w-10 bg-[#CBBFA8]/80" />
-        </div>
-
-        {/* 盘面：一张纸，居中 */}
-        <div
-          ref={shotRef}
-          className="mx-auto w-full max-w-[440px] bg-[#FBF7EC] px-4 py-4 sm:px-5"
-          style={{
-            borderRadius: 10,
-            border: '1px solid rgba(179,160,125,0.55)',
-            boxShadow: '0 8px 24px rgba(64,69,60,0.08)',
-          }}
-        >
-          <ResponsiveBoard {...boardProps} />
-        </div>
-
-        {/* 解卦（入口在面板内，底部只留导航动作） */}
-        <div className="mt-5">
-          <ReadingPanel ref={panelRef} facts={facts} hideIdleButton onPhaseChange={setPhase} />
+          {/* 右：解卦正文（一张纸，读完像一页批注） */}
+          <div className="min-w-0 lg:mt-6">
+            <div
+              className={`lg:min-h-[620px] lg:bg-[#FBF7EC]/70 lg:px-8 lg:py-8 ${
+                phase === 'idle' ? 'lg:flex lg:flex-col lg:items-center lg:justify-center' : ''
+              }`}
+              style={{ borderRadius: 10, border: '1px solid rgba(179,160,125,0.38)' }}
+            >
+              <ReadingPanel
+                ref={panelRef}
+                facts={facts}
+                hideIdleButton
+                className="mt-5 lg:mt-0"
+                onPhaseChange={setPhase}
+              />
+              {phase === 'idle' && (
+                <div className="hidden flex-col items-center justify-center gap-3 py-16 text-center lg:flex lg:py-0">
+                  <span aria-hidden className="font-song text-[15px] text-[#C0B49B]">
+                    ☯
+                  </span>
+                  <p className="font-song text-[13.5px] leading-[2.2] tracking-[0.04em] text-[#8C8272]">
+                    盘面已定，卦气在纸。
+                    <br />
+                    点盘面下方「解 卦」，依盘面事实作四段解读。
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </main>
 
       {/* 底栏只承载「此刻唯一的动作」：解卦 / 停止；读完之后收起，让页面回到纯阅读 */}
       {showActionBar && (
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-[#F4F1E8]/95 backdrop-blur-md">
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-[#F4F1E8]/95 backdrop-blur-md lg:hidden">
           <div className="mx-auto w-full max-w-[640px] px-4 pt-2.5 sm:px-6" style={{ borderTop: '1px solid #DDD4BE' }}>
             <button
               type="button"

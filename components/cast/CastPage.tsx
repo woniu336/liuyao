@@ -179,21 +179,21 @@ export default function CastPage() {
       {/* 顶部导航：易林寻踪 · 六爻 / 古籍 / 历史排盘 */}
       <SiteHeader active="liuyao" maxWidthClassName="max-w-[1200px]" />
 
-      {/* 山水题签 */}
-      <section className="relative isolate overflow-hidden">
+      {/* 山水题签：移动端不占首屏（首屏要放得下整张求测笺），PC 保留 */}
+      <section className="relative isolate hidden overflow-hidden sm:block">
         <InkLandscape />
-        <div className="relative z-10 mx-auto flex min-h-[146px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-4 pt-1 text-center sm:min-h-[162px] lg:min-h-[182px] lg:pb-5">
-          <h1 className="font-song text-[34px] font-semibold leading-none tracking-[0.26em] text-[#304239] sm:text-[40px] lg:text-[44px]">
+        <div className="relative z-10 mx-auto flex min-h-[162px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-4 pt-1 text-center lg:min-h-[182px] lg:pb-5">
+          <h1 className="font-song text-[40px] font-semibold leading-none tracking-[0.26em] text-[#304239] lg:text-[44px]">
             起 卦
           </h1>
-          <p className="mt-3 font-kai text-[14px] tracking-[0.16em] text-[#96794F] sm:text-[15px] lg:text-[16px]">
+          <p className="mt-3 font-kai text-[15px] tracking-[0.16em] text-[#96794F] lg:text-[16px]">
             取象于天地，观变于阴阳
           </p>
         </div>
       </section>
 
       {/* 主纸笺：PC 扩展为宽幅宣纸，内容仍沿中轴排列 */}
-      <main className="relative z-10 mx-auto -mt-7 w-full max-w-[960px] px-3 pb-16 sm:px-5 lg:px-8">
+      <main className="relative z-10 mx-auto mt-3 w-full max-w-[960px] px-3 pb-16 sm:-mt-7 sm:px-5 lg:px-8">
         <div
           className="relative overflow-hidden bg-[#FCF9F0] px-4 py-5 sm:px-7 sm:py-7 lg:px-12 lg:py-9"
           style={{ border: '1px solid rgba(179,160,125,0.52)', borderRadius: 14, boxShadow: '0 8px 30px rgba(64,69,60,0.10)' }}
@@ -269,16 +269,6 @@ export default function CastPage() {
                 className="press inline-flex h-7 items-center rounded-[3px] border border-[#CBBFA8] px-2 font-song text-[11.5px] text-[#6E6A5C] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]"
               >
                 修改
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAutoTime(true);
-                  setTimeInput(nowTimeInput());
-                }}
-                className={`press font-song text-[11.5px] underline-offset-4 hover:underline ${autoTime ? 'text-[#557364]' : 'text-[#867D6B]'}`}
-              >
-                {autoTime ? '跟随此刻' : '归位当前'}
               </button>
               {timeInfo && (
                 <span className="w-full pl-[29px] font-song text-[12px] tracking-[0.08em] text-[#786F5F] sm:w-auto sm:pl-0">

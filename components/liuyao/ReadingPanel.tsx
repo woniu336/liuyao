@@ -66,7 +66,7 @@ function renderBlocks(text: string) {
         <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full bg-[#3E5148] font-song text-[11.5px] leading-none text-[#F6EFDC]">
           {block.numeral}
         </span>
-        <span className="shrink-0 font-song text-[14.5px] font-semibold tracking-[0.14em] text-[#2E3B33]">
+        <span className="shrink-0 font-song text-[14.5px] font-semibold tracking-[0.14em] text-[#2E3B33] lg:text-[15.5px]">
           {block.text}
         </span>
         <span aria-hidden className="h-px flex-1 bg-[#D9CFB8]" />
@@ -75,7 +75,7 @@ function renderBlocks(text: string) {
       <p
         key={i}
         data-block="p"
-        className="mb-4 indent-8 text-justify text-[14.5px] leading-[2.05] tracking-[0.01em] text-[#3B372F] last:mb-0"
+        className="mb-4 indent-8 text-justify text-[14.5px] leading-[2.05] tracking-[0.01em] text-[#3B372F] last:mb-0 lg:text-[15.5px] lg:leading-[2.15]"
       >
         {block.text}
       </p>
@@ -96,10 +96,12 @@ export interface ReadingPanelProps {
   onPhaseChange?: (phase: Phase) => void;
   /** 是否隐藏面板自带的入口按钮（页面底部已有主按钮时用） */
   hideIdleButton?: boolean;
+  /** 外层间距（PC 两栏时右侧不需要 mt-7） */
+  className?: string;
 }
 
 const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(function ReadingPanel(
-  { facts, onTextChange, onPhaseChange, hideIdleButton },
+  { facts, onTextChange, onPhaseChange, hideIdleButton, className = 'mt-7' },
   ref,
 ) {
   const [phase, setPhase] = useState<Phase>('idle');
@@ -244,7 +246,7 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
 
   if (phase === 'idle') {
     return (
-      <section className="mt-7 border-t border-[#E8DFC9] pt-6">
+      <section className={`border-t border-[#E8DFC9] pt-6 ${className}`}>
         <div className="flex flex-col items-center gap-2.5 py-2">
           <button
             type="button"
@@ -262,7 +264,7 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
   }
 
   return (
-    <section ref={sectionRef} className="mt-7 scroll-mt-20">
+    <section ref={sectionRef} className={`scroll-mt-20 ${className}`}>
       <div className="relative mx-auto max-w-[680px]">
         {phase === 'streaming' && !text && (
           <div className="flex flex-col items-center gap-3 py-9">
