@@ -6,10 +6,12 @@ import { RotateCcw, Star } from 'lucide-react';
 import CastWorkbench from './CastWorkbench';
 import ManualCast from './ManualCast';
 import HexagramBoard from './HexagramBoard';
+import ReadingPanel from './ReadingPanel';
 import type { CoinResult } from './types';
 import { castLiuyao, type LiuyaoChart } from '@/lib/liuyao/najia';
 import { buildLiuyaoInput, castTimeInfo, nowTimeInput, parseTimeInput, type CastTimeInfo } from '@/lib/liuyao/ganzhi';
 import { boardToText, chartToBoardProps, type BoardViewProps } from '@/lib/liuyao/board-view';
+import { buildLiuyaoReadingFacts } from '@/lib/readings/facts';
 import { getCaseStore } from '@/lib/store';
 import { buildLiuyaoRecord } from '@/lib/cases/record';
 
@@ -140,6 +142,11 @@ export default function LiuyaoView() {
     ? chartToBoardProps(result.chart, result.time, question, gender)
     : null;
 
+  const readingFacts = useMemo(
+    () => (result ? buildLiuyaoReadingFacts(result.chart, result.time, question) : null),
+    [result, question],
+  );
+
   const handleCopy = async () => {
     if (!boardProps) return;
     try {
@@ -212,18 +219,21 @@ export default function LiuyaoView() {
             <HexagramBoard {...boardProps} />
           </section>
 
-          {/* 下卷：裁剪说明（原项目此处为解卦手札，本仓库不含大模型解卦） */}
+          {/* 中卷：解卦（禅意版） */}
+          {readingFacts && <ReadingPanel facts={readingFacts} />}
+
+          {/* 下卷：说明 */}
           <section className="space-y-3 border-t border-[#E8DFC9] pt-4">
             <div className="flex items-center gap-2 text-xs font-bold tracking-[0.25em] text-[#6E6355]">
               <span className="inline-block h-[5px] w-[5px] rounded-full bg-[#9E2A2B]/70" />
               <span>收 盘 说 明</span>
             </div>
             <p className="text-[12.5px] leading-relaxed text-[#7D7060]">
-              本页只做确定性排盘：纳甲装卦 · 安世应 · 定六亲 · 旬空 · 伏神 · 六神 · 月卦身 · 十三神煞。
-              不含用神取舍、生克旺衰、吉凶断语与应期，也不调用大模型解卦。
+              排盘是确定性的：纳甲装卦 · 安世应 · 定六亲 · 旬空 · 伏神 · 六神 · 月卦身 · 十三神煞。
+              解卦只基于这份盘面事实作象理说明，不重排盘、不改写干支爻位。
             </p>
             <p className="text-[12px] leading-relaxed text-[#9C907F]">
-              所问与性别只作落款记录，未参与任何计算。
+              所问与性别只作落款记录，未参与排盘计算。
             </p>
           </section>
         </div>

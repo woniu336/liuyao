@@ -45,15 +45,31 @@ export interface LiuyaoReadingFacts {
   movingLines: number[];
   voidBranches: string[];
   monthBody: { branch: string; position: number };
+  /** 十三实用星煞（与盘面同一套算法） */
   shensha: {
+    guiren: string;
+    lushen: string;
+    yangren: string;
+    wenchang: string;
     yima: string;
     taohua: string;
-    lushen: string;
-    guiren: string[];
+    jiangxing: string;
+    huagai: string;
+    mouxing: string;
+    jiesha: string;
+    zaisha: string;
     tianyi: string;
-    wenchang: string;
+    tianxi: string;
   };
   lines: LiuyaoLineFacts[];
+  /** 经文层：只给卦辞与动爻爻辞（不含翻译/注家） */
+  oracle: {
+    baseGuaCi: string | null;
+    changedGuaCi: string | null;
+    movingLines: { position: number; text: string }[];
+    /** 六爻全动且为乾/坤时的用九/用六 */
+    yong: { title: string; text: string } | null;
+  };
 }
 
 export interface XctPalaceFacts {

@@ -10,6 +10,8 @@ import type { LiuyaoChart } from '@/lib/liuyao/najia';
 import type { CastTimeInfo } from '@/lib/liuyao/ganzhi';
 import type { BoardState, PalaceJudgment, PalaceNumber, ZhengTuiChain } from '@/lib/xct/types';
 import { PALACE_NAMES, SIXTY_FOUR_HEXAGRAMS } from '@/lib/xct/constants';
+import { calcGuShiShenSha } from '@/lib/zhanbu/shensha';
+import { guaCi, hexMaskFromBinary, yaoCi } from '@/lib/hexagram/oracle-text';
 import type {
   LiuyaoLineFacts,
   LiuyaoReadingFacts,
@@ -57,6 +59,12 @@ export function buildLiuyaoReadingFacts(
       : {}),
   }));
 
+  const mask = hexMaskFromBinary(chart.base.binary);
+  const changedMask = chart.changed ? hexMaskFromBinary(chart.changed.binary) : null;
+  const allMoving = chart.movingLines.length === 6;
+  const yongText = allMoving ? yaoCi(mask, 'yong') : null;
+  const ss = calcGuShiShenSha(chart.input.dayGz, chart.input.monthBranch);
+
   return {
     kind: 'liuyao',
     question: question.trim().slice(0, 500),
@@ -79,14 +87,29 @@ export function buildLiuyaoReadingFacts(
     voidBranches: chart.voidBranches as string[],
     monthBody: { branch: chart.monthBody.branch, position: chart.monthBody.position },
     shensha: {
-      yima: chart.shensha.yima,
-      taohua: chart.shensha.taohua,
-      lushen: chart.shensha.lushen,
-      guiren: chart.shensha.guiren,
-      tianyi: chart.shensha.tianyi,
-      wenchang: chart.shensha.wenchang,
+      guiren: ss.guiren,
+      lushen: ss.lushen,
+      yangren: ss.yangren,
+      wenchang: ss.wenchang,
+      yima: ss.yima,
+      taohua: ss.taohua,
+      jiangxing: ss.jiangxing,
+      huagai: ss.huagai,
+      mouxing: ss.mouxing,
+      jiesha: ss.jiesha,
+      zaisha: ss.zaisha,
+      tianyi: ss.tianyi,
+      tianxi: ss.tianxi,
     },
     lines,
+    oracle: {
+      baseGuaCi: guaCi(mask),
+      changedGuaCi: changedMask !== null ? guaCi(changedMask) : null,
+      movingLines: chart.movingLines
+        .map((pos) => ({ position: pos, text: yaoCi(mask, pos) }))
+        .filter((x): x is { position: number; text: string } => Boolean(x.text)),
+      yong: yongText ? { title: chart.base.name.startsWith('乾') ? '用九' : '用六', text: yongText } : null,
+    },
   };
 }
 
