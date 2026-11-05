@@ -122,37 +122,14 @@ function liuyaoBrief(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): string {
   ].join('\n');
 }
 
-function xctBrief(facts: Extract<ReadingFacts, { kind: 'xct' }>): string {
-  const palaceText = facts.palaces
-    .map(
-      (p) =>
-        `${p.palaceName} 天盘${p.heaven}／地盘${p.earth} ${p.hexName || `${p.heaven}之${p.earth}`}｜${
-          p.mode ? `${p.mode}式·` : ''
-        }${p.matched === null ? '' : p.matched ? '得配·' : '失配·'}${p.verdict}`,
-    )
-    .join('\n');
-
-  return [
-    `【小成图】`,
-    `起卦：${facts.time.solar} · ${facts.time.ganzhi}`,
-    `所问：${facts.question || '（未填写）'}`,
-    `本图：${facts.ben.name}（${facts.ben.upper}上${facts.ben.lower}下）`,
-    `之图：${facts.zhi.name}（${facts.zhi.upper}上${facts.zhi.lower}下）`,
-    `中宫归藏：${facts.center}`,
-    `九宫：\n${palaceText}`,
-    `正推链：${facts.chain.path.join(' → ')}（${facts.chain.endReason}${facts.chain.hasCycle ? '·闭环' : ''}）`,
-    `链注：${facts.chain.summary}`,
-  ].join('\n');
-}
-
-export function buildReadingPrompt(facts: ReadingFacts): { system: string; user: string } {
-  const brief = facts.kind === 'liuyao' ? liuyaoBrief(facts) : xctBrief(facts);
-  const ask =
-    facts.kind === 'liuyao'
-      ? '请按四段写出这一卦的解读。盘面已是定局，不必重排，也不要复述全部爻位。'
-      : '请按盘面事实解读这一图，先说九宫气路，再谈走势。';
+/** 六爻专用：系统提示与用户消息 */
+export function buildLiuyaoPrompt(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): { system: string; user: string } {
+  const ask = '请按四段写出这一卦的解读。盘面已是定局，不必重排，也不要复述全部爻位。';
   return {
     system: SYSTEM_PROMPT,
-    user: `${brief}\n\n${ask}\n（以上事实由引擎确定性排出；不要改写事实本身。）`,
+    user: `${liuyaoBrief(facts)}
+
+${ask}
+（以上事实由引擎确定性排出；不要改写事实本身。）`,
   };
 }

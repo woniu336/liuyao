@@ -4,7 +4,6 @@ import type { CastTimeInfo } from '../lib/liuyao/ganzhi';
 import { buildXctReadingFacts, buildLiuyaoReadingFacts } from '../lib/readings/facts';
 import { buildBoardFromManualTrigrams } from '../lib/xct/boardBuilder';
 import { judgeFullBoard } from '../lib/xct/judgeEngine';
-import { traceZhengTuiChain } from '../lib/xct/dagTracker';
 
 const time: CastTimeInfo = {
   iso: '',
@@ -52,16 +51,28 @@ describe('解卦事实层', () => {
     expect(facts.question.length).toBe(500);
   });
 
-  it('小成图 facts 含九宫与正推链，卦名与本/之图一致', () => {
+  it('小成图 facts 含九宫、天盘缺漏与卦→本宫表', () => {
     const board = buildBoardFromManualTrigrams('乾', '兑', '离', '坤');
     const judgments = judgeFullBoard(board);
-    const chain = traceZhengTuiChain(board, 5);
-    const facts = buildXctReadingFacts(board, judgments, chain, time, '');
+    const facts = buildXctReadingFacts(board, judgments, time, '问财运', {
+      gender: '女',
+      marital: 'married',
+      castFrom: 'coin',
+      movingLines: [2],
+    });
     expect(facts.palaces).toHaveLength(9);
     expect(facts.ben.name).toBe('天泽履');
     expect(facts.zhi.name).toBe('火地晋');
     expect(facts.center).toBe(board.center);
-    expect(facts.chain.path.length).toBeGreaterThan(0);
+    expect(facts.gender).toBe('女');
+    expect(facts.marital).toBe('married');
+    // 天盘 8 卦的分布必须自洽：出现 + 缺席 = 八卦全集
+    expect([...facts.heavenSeen, ...facts.heavenMissing].sort()).toEqual(
+      [...new Set([...facts.heavenSeen, ...facts.heavenMissing])].sort(),
+    );
+    expect(facts.heavenSeen.length + facts.heavenMissing.length).toBe(8);
+    expect(facts.guaToPalace['坤']).toBe(2);
+    expect(facts.palaces[0].rising).toBeTruthy();
     const text = JSON.stringify(facts);
     expect(text).not.toMatch(/api[_-]?key|sk-|token|secret|password/i);
   });

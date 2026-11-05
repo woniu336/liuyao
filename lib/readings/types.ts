@@ -78,6 +78,8 @@ export interface XctPalaceFacts {
   heaven: string;
   earth: string;
   hexName: string;
+  /** 天盘/地盘的升降（阖辟往来四象的判定依据） */
+  rising: { heaven: '升' | '降'; earth: '升' | '降' };
   mode: string | null;
   matched: boolean | null;
   verdict: string;
@@ -87,11 +89,25 @@ export interface XctReadingFacts {
   kind: 'xct';
   question: string;
   time: ReadingTimeFacts;
+  /** 求测者信息：小成图用宫按性别与婚否分路 */
+  gender: '男' | '女';
+  marital: 'married' | 'unmarried' | 'unknown';
+  /** 起卦来源：coin 由六爻转化；four/time/self 为小成图自起 */
+  castFrom: 'coin' | 'four' | 'time' | 'self';
   ben: { upper: string; lower: string; name: string };
   zhi: { upper: string; lower: string; name: string };
   center: string;
   palaces: XctPalaceFacts[];
-  chain: { path: string[]; summary: string; endReason: string; hasCycle: boolean };
+  /** 卦 → 地盘本宫（供解卦者自行正推/逆推，避免预先钉死一条链） */
+  guaToPalace: Record<string, number>;
+  /** 天盘出现 / 缺席 / 重复的卦（婚姻、生育、学历等硬判据） */
+  heavenSeen: string[];
+  heavenMissing: string[];
+  heavenDuplicate: string[];
+  /** 六爻安静时以宜变法立之卦；有动爻时为参看 */
+  yiBian: { position: number | null; sum: number; movingCount: number; note: string; zhiSource: 'moving' | 'yibian' } | null;
+  /** 若由六爻转化：动爻位（1..6） */
+  movingLines: number[];
 }
 
 export type ReadingFacts = LiuyaoReadingFacts | XctReadingFacts;

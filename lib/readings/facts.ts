@@ -8,8 +8,8 @@
 
 import type { LiuyaoChart } from '@/lib/liuyao/najia';
 import type { CastTimeInfo } from '@/lib/liuyao/ganzhi';
-import type { BoardState, PalaceJudgment, PalaceNumber, ZhengTuiChain } from '@/lib/xct/types';
-import { PALACE_NAMES, SIXTY_FOUR_HEXAGRAMS } from '@/lib/xct/constants';
+import type { BoardState, PalaceJudgment, PalaceNumber } from '@/lib/xct/types';
+import { ALL_TRIGRAMS, GUA_TO_PALACE, PALACE_NAMES, SIXTY_FOUR_HEXAGRAMS, TRIGRAM_RISING } from '@/lib/xct/constants';
 import { calcGuShiShenSha } from '@/lib/zhanbu/shensha';
 import { guaCi, hexMaskFromBinary, yaoCi } from '@/lib/hexagram/oracle-text';
 import type {
@@ -113,12 +113,20 @@ export function buildLiuyaoReadingFacts(
   };
 }
 
+export interface XctFactsOptions {
+  gender?: '男' | '女';
+  marital?: 'married' | 'unmarried' | 'unknown';
+  castFrom?: 'coin' | 'four' | 'time' | 'self';
+  movingLines?: number[];
+  yiBian?: { position: number | null; sum: number; movingCount: number; note: string; zhiSource: 'moving' | 'yibian' } | null;
+}
+
 export function buildXctReadingFacts(
   board: BoardState,
   judgments: Record<PalaceNumber, PalaceJudgment>,
-  chain: ZhengTuiChain,
   time: CastTimeInfo,
   question = '',
+  options: XctFactsOptions = {},
 ): XctReadingFacts {
   const palaces: XctPalaceFacts[] = [];
   for (let p = 1; p <= 9; p += 1) {
@@ -129,27 +137,43 @@ export function buildXctReadingFacts(
       heaven: j.heaven,
       earth: j.earth,
       hexName: j.hexName,
+      rising: {
+        heaven: TRIGRAM_RISING[j.heaven as never] ? '升' : '降',
+        earth: TRIGRAM_RISING[j.earth as never] ? '升' : '降',
+      },
       mode: j.mode,
       matched: j.matched,
       verdict: j.verdict,
     });
   }
+
   const name = (pair: { upper: string; lower: string }) =>
     SIXTY_FOUR_HEXAGRAMS[pair.upper as never]?.[pair.lower as never] ?? `${pair.upper}${pair.lower}`;
+
+  // 天盘八卦分布：出现 / 缺席 / 重复（婚占、生育、学历的硬判据）
+  const heavenValues = [1, 2, 3, 4, 6, 7, 8, 9].map((p) => board.heaven[p as PalaceNumber]);
+  const counts = new Map<string, number>();
+  for (const g of heavenValues) counts.set(g, (counts.get(g) ?? 0) + 1);
+  const heavenSeen = [...counts.keys()];
+  const heavenMissing = ALL_TRIGRAMS.filter((g) => !counts.has(g));
+  const heavenDuplicate = [...counts.entries()].filter(([, n]) => n > 1).map(([g]) => g);
 
   return {
     kind: 'xct',
     question: question.trim().slice(0, 500),
     time: timeFacts(time),
+    gender: options.gender ?? '男',
+    marital: options.marital ?? 'unknown',
+    castFrom: options.castFrom ?? 'four',
     ben: { upper: board.ben.upper, lower: board.ben.lower, name: name(board.ben) },
     zhi: { upper: board.zhi.upper, lower: board.zhi.lower, name: name(board.zhi) },
     center: board.center,
     palaces,
-    chain: {
-      path: chain.path.map((p) => PALACE_NAMES[p]),
-      summary: chain.summary,
-      endReason: chain.endReason ?? 'open',
-      hasCycle: chain.hasCycle,
-    },
+    guaToPalace: Object.fromEntries(ALL_TRIGRAMS.map((g) => [g, GUA_TO_PALACE[g]])),
+    heavenSeen,
+    heavenMissing,
+    heavenDuplicate,
+    yiBian: options.yiBian ?? null,
+    movingLines: options.movingLines ?? [],
   };
 }

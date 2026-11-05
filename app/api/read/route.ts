@@ -14,7 +14,8 @@
  * 真正上线时应换成 Cloudflare Rate Limiting 或 D1/KV 计数（见 docs/cloudflare.md）。
  */
 
-import { buildReadingPrompt } from './prompt';
+import { buildLiuyaoPrompt } from './prompt';
+import { buildXctPrompt } from './prompt-xct';
 import type { ReadingFacts } from '@/lib/readings/types';
 import { getAdminStore } from '@/lib/admin/store';
 import {
@@ -178,7 +179,8 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const { system, user } = buildReadingPrompt(facts);
+  const { system, user } =
+    facts.kind === 'liuyao' ? buildLiuyaoPrompt(facts) : buildXctPrompt(facts);
 
   let upstream: Response;
   try {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { castLiuyao } from '../lib/liuyao/najia';
 import type { CastTimeInfo } from '../lib/liuyao/ganzhi';
 import { buildLiuyaoReadingFacts } from '../lib/readings/facts';
-import { buildReadingPrompt } from '../app/api/read/prompt';
+import { buildLiuyaoPrompt } from '../app/api/read/prompt';
 
 const time: CastTimeInfo = {
   iso: '',
@@ -30,7 +30,7 @@ function factsOf(coins: number[]) {
 
 describe('解卦 prompt（精简版）', () => {
   const facts = factsOf([0, 1, 1, 1, 1, 1]);
-  const { system, user } = buildReadingPrompt(facts);
+  const { system, user } = buildLiuyaoPrompt(facts);
 
   it('系统提示仍在两千字内，且明确「不重排盘」', () => {
     expect(system.length).toBeLessThan(2000);
