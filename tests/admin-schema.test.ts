@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { SCHEMA_SQL, SCHEMA_STATEMENTS } from '../lib/admin/store/schema.generated';
+import { SCHEMA_SQL, SCHEMA_STATEMENTS } from '../lib/db/schema.generated';
 
 /**
  * 运行时建表语句必须与 migrations/*.sql 完全同源。

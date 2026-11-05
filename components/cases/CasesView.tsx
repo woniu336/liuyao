@@ -18,12 +18,14 @@ const KIND_LABEL: Record<CaseRecord['kind'], string> = { liuyao: '六爻', xct: 
 
 export default function CasesView() {
   const [items, setItems] = useState<CaseRecord[] | null>(null);
+  const [mode, setMode] = useState<'local' | 'remote'>('local');
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const list = await getCaseStore().list();
-      setItems(list);
+      const store = await getCaseStore();
+      setMode(store.mode ?? 'local');
+      setItems(await store.list());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setItems([]);
@@ -35,7 +37,8 @@ export default function CasesView() {
   }, [load]);
 
   const toggleFavorite = async (record: CaseRecord) => {
-    await getCaseStore().setFavorite(record.id, !record.favorite);
+    const store = await getCaseStore();
+    await store.setFavorite(record.id, !record.favorite);
     await load();
   };
 
@@ -43,7 +46,8 @@ export default function CasesView() {
     if (!window.confirm(`删除这条卦例？\n\n${record.summary.primary}${record.summary.changed ? ` → ${record.summary.changed}` : ''}`)) {
       return;
     }
-    await getCaseStore().remove(record.id);
+    const store = await getCaseStore();
+    await store.remove(record.id);
     await load();
   };
 
@@ -61,7 +65,9 @@ export default function CasesView() {
 
       <p className="mb-4 pl-[18px] text-[11.5px] leading-relaxed text-[#7c7365]">
         只保存起卦输入（时间 / 投掷 / 起卦法），打开时由引擎重新排出同一卦。
-        目前存在本机浏览器；以后接 D1 可跨设备同步。
+        {mode === 'remote'
+          ? '已保存到云端（按本机匿名声明的设备 ID 归属）：换浏览器或清除 Cookie 会得到新的卦例夹。'
+          : '当前保存在本机浏览器；完整云端存储请用 npm run dev:vinext 或线上环境。'}
       </p>
 
       {error && (

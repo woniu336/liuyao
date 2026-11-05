@@ -118,8 +118,10 @@ npm test
 
 ## 服务端边界（为 Cloudflare 预留）
 
-- `lib/store/`：卦例存储接口（异步）+ localStorage 实现；换 D1 只改实现。
+- `lib/store/`：卦例存储接口（异步）—— 本地 localStorage / 远端 D1 两种实现。
   `/cases` 里可收藏、打开复原（只存起卦输入，盘面由引擎重算）、删除。
+  接上 D1 后按**匿名设备 Cookie** 归属（`ly_device`），旧本地卦例首次访问自动迁移；
+  换浏览器/清 Cookie 会得到新的卦例夹（跨设备需以后接账号）。
 - `lib/readings/`：解卦**事实契约**（客户端只发盘面事实与问句）。
   `app/api/read/route.ts` 是服务端流式代理：prompt 在服务端拼（`route` 同目录 `prompt.ts`），
   密钥只在服务端 env/secret，未配置时明确返回 501。暂无前端入口，断卦口径待定。

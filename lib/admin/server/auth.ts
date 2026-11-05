@@ -10,6 +10,10 @@
  * 「信任 Cf-Access-Jwt-Assertion」的分支即可，口令分支可保留为兜底。
  */
 
+import { clientIp, sameOrigin } from '@/lib/server/request';
+
+export { clientIp, sameOrigin };
+
 export const ADMIN_COOKIE = 'ly_admin';
 export const SESSION_TTL_SECONDS = 7 * 24 * 3600;
 
@@ -177,20 +181,6 @@ export async function requireAdmin(req: Request): Promise<AdminGuard> {
   return { ok: true, actor: 'admin' };
 }
 
-/**
- * 写操作的 CSRF 兜底：带 Origin 时必须与 Host 同源。
- * curl / 服务端调用没有 Origin，放行（它们本来也不带会话 Cookie）。
- */
-export function sameOrigin(req: Request): boolean {
-  const origin = req.headers.get('origin');
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === req.headers.get('host');
-  } catch {
-    return false;
-  }
-}
-
 /** 登录限流：内存表，单 isolate 有效；上线后换 Cloudflare Rate Limiting */
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
@@ -203,14 +193,4 @@ export function loginRateLimited(ip: string, max = 5, windowMs = 5 * 60_000): bo
   }
   cur.count += 1;
   return cur.count > max;
-}
-
-export function clientIp(req: Request): string {
-  const h = req.headers;
-  return (
-    h.get('cf-connecting-ip') ||
-    h.get('x-real-ip') ||
-    (h.get('x-forwarded-for') || '').split(',')[0].trim() ||
-    'unknown'
-  );
 }

@@ -289,7 +289,8 @@ export default function XiaoChengTuView() {
     const id = new URLSearchParams(window.location.search).get('case');
     if (!id) return;
     void (async () => {
-      const record = await getCaseStore().get(id);
+      const store = await getCaseStore();
+      const record = await store.get(id);
       if (!record || record.kind !== 'xct' || record.input.kind !== 'xct') {
         setNotice('卦例不存在或类型不符');
         return;
@@ -335,7 +336,8 @@ export default function XiaoChengTuView() {
         timeDate: castSnapshot.timeDate,
         manual: castSnapshot.manual,
       });
-      await getCaseStore().save(record);
+      const store = await getCaseStore();
+      await store.save(record);
       setSavedId(record.id);
     } catch (e) {
       setNotice(e instanceof Error ? e.message : String(e));

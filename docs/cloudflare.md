@@ -187,3 +187,50 @@ npm run dev               # http://localhost:3000/admin
 - 配置最多 60s 生效（接口缓存）；后台改完想立刻看，可刷新两次或等一分钟。
 - 公告/统计都是「失败静默」：接口挂了只影响它们自己，排盘照常。
 - 统计 token 本身就是公开信息（会出现在页面源码里），不是密钥。
+
+## 十、卦例上云（M3 第二部分，已完成）
+
+### 归属：匿名设备 ID
+
+- 首次访问 `/api/cases` 时下发 `ly_device`：HttpOnly + SameSite=Lax + 1 年 + Secure(https)。
+- 服务端以它作为 `owner_id`，所有查询/写入都带 owner 条件，客户端**不传 owner**。
+- 边界（如实告知）：同一浏览器（Cookie）才有同一批卦例；换设备/换浏览器/清 Cookie 会得到新卦例夹。
+  以后接账号体系时只换 `ownerId` 来源，`CaseStore` 与 UI 不动。
+
+### 双模式与迁移
+
+客户端 `getCaseStore()` 先探活 `GET /api/cases?probe=1`：
+
+| 返回 | 客户端行为 |
+|---|---|
+| `mode: d1` | 远端 `RemoteCaseStore`（服务端 D1） |
+| `mode: memory`（next dev 无绑定） | 本地 localStorage（避免"重启就丢"的错觉） |
+| 接口不可用 | 本地 localStorage |
+
+切到远端时会把 localStorage 里的旧卦例**一次性导入**（`POST {cases:[...]}`，按 id 幂等），
+成功后写 `liuyao.cases.migrated.v1`；失败则下次再试。
+
+### 接口
+
+| 路径 | 说明 |
+|---|---|
+| `GET /api/cases?probe=1` | 探测模式（d1/memory），并下发/复用设备 Cookie |
+| `GET /api/cases` | 本人卦例列表（≤200，created_at 倒序） |
+| `GET /api/cases?id=` | 单条（非本人返回 404） |
+| `POST /api/cases` | `{record}` 单条写入 / `{cases:[...]}` 批量导入（≤200） |
+| `PATCH /api/cases` | `{id, favorite}` 收藏 |
+| `DELETE /api/cases?id=` | 删除 |
+
+约束：请求体 ≤512KB；写入限流 60 次/分钟（进程内）；同源校验；每 owner 仅保留最近 200 条
+（超出在写入时自动裁剪）；服务端 `parseCaseRecord` 做 fail-closed 校验（长度/枚举/投掷值/
+类型一致性），多余字段一律丢弃。
+
+### 验证（workerd + 本地 D1）
+
+- 保存 → `/cases` 显示（提示"已保存到云端"）→ 打开复原 → 收藏 → 删除，全程 0 console error。
+- 新浏览器上下文（无 Cookie）看不到别人的卦例（owner 隔离）。
+- localStorage 旧卦例：首次 `/cases` 自动批量迁移，标记置 1，之后不再重复。
+- 58 项测试通过（新增校验 6、远端存储 4）；两套 build 与 `check` 通过。
+
+上线前还要补的滥用防护：现在的限流是单 isolate 内存表，且设备 Cookie 可被清除后重领。
+正式上线建议叠加 Cloudflare Rate Limiting / Turnstile，或给 `ly_device` 加签名防止无限新建 owner。

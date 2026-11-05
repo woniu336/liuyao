@@ -1,5 +1,5 @@
 import type { AuditEntry, LlmProfile } from '../types';
-import { SCHEMA_STATEMENTS } from './schema.generated';
+import { ensureD1Schema } from '@/lib/db/ensure-schema';
 import type { AdminStore } from './types';
 import type { D1Like } from './d1-types';
 
@@ -22,8 +22,6 @@ interface AuditRow {
   detail: string | null;
 }
 
-const ensured = new WeakSet<object>();
-
 /**
  * D1 实现。
  *
@@ -34,11 +32,7 @@ export class D1AdminStore implements AdminStore {
   constructor(private readonly db: D1Like) {}
 
   private async ready(): Promise<void> {
-    if (ensured.has(this.db as unknown as object)) return;
-    for (const statement of SCHEMA_STATEMENTS) {
-      await this.db.prepare(statement).run();
-    }
-    ensured.add(this.db as unknown as object);
+    await ensureD1Schema(this.db);
   }
 
   async getSetting<T>(key: string): Promise<T | null> {

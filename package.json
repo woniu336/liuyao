@@ -14,8 +14,8 @@
     "build:vinext": "vite build",
     "start:vinext": "vite preview",
     "deploy:vinext": "vinext-cloudflare deploy",
-    "gen:schema": "node scripts/gen-admin-schema.mjs",
-    "check:schema": "node scripts/gen-admin-schema.mjs --check",
+    "gen:schema": "node scripts/gen-db-schema.mjs",
+    "check:schema": "node scripts/gen-db-schema.mjs --check",
     "check": "npm run check:schema && npm run check:portability && npm test"
   },
   "dependencies": {

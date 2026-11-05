@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 从 migrations/*.sql 生成 lib/admin/store/schema.generated.ts。
+ * 从 migrations/*.sql 生成 lib/db/schema.generated.ts。
  *
  * 为什么要有这一步：
  *   - 迁移文件是唯一事实源（可交给 D1 CLI / 人工审阅）；
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const migrationsDir = path.join(root, 'migrations');
-const outFile = path.join(root, 'lib', 'admin', 'store', 'schema.generated.ts');
+const outFile = path.join(root, 'lib', 'db', 'schema.generated.ts');
 
 const files = fs
   .readdirSync(migrationsDir)
@@ -50,7 +50,7 @@ const changed = existing !== body;
 
 if (process.argv.includes('--check')) {
   if (changed) {
-    console.error('[check:schema] lib/admin/store/schema.generated.ts 与 migrations/*.sql 不一致，请运行 npm run gen:schema');
+    console.error('[check:schema] lib/db/schema.generated.ts 与 migrations/*.sql 不一致，请运行 npm run gen:schema');
     process.exit(1);
   }
   console.log('[check:schema] OK');

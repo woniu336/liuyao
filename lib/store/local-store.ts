@@ -50,6 +50,8 @@ function migrate(raw: unknown): CaseRecord[] {
 }
 
 export class LocalCaseStore implements CaseStore {
+  readonly mode = 'local' as const;
+
   constructor(private readonly storage: StorageLike) {}
 
   private read(): CaseRecord[] {
@@ -98,6 +100,7 @@ export class LocalCaseStore implements CaseStore {
 
 /** 测试 / SSR 用的内存实现 */
 export class MemoryCaseStore implements CaseStore {
+  readonly mode = 'local' as const;
   private items: CaseRecord[] = [];
   async list() {
     return [...this.items].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));

@@ -89,7 +89,8 @@ export default function LiuyaoView() {
     const id = new URLSearchParams(window.location.search).get('case');
     if (!id) return;
     void (async () => {
-      const record = await getCaseStore().get(id);
+      const store = await getCaseStore();
+      const record = await store.get(id);
       if (!record || record.kind !== 'liuyao' || record.input.kind !== 'liuyao') {
         setError('卦例不存在或类型不符');
         return;
@@ -127,7 +128,8 @@ export default function LiuyaoView() {
         method: result.method,
         coins: result.coins,
       });
-      await getCaseStore().save(record);
+      const store = await getCaseStore();
+      await store.save(record);
       setSavedId(record.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

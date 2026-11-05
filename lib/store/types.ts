@@ -67,6 +67,8 @@ export interface CaseRecord {
 }
 
 export interface CaseStore {
+  /** local = 仅本机浏览器；remote = 服务端（D1，按匿名设备隔离） */
+  readonly mode?: 'local' | 'remote';
   list(): Promise<CaseRecord[]>;
   get(id: string): Promise<CaseRecord | null>;
   save(record: CaseRecord): Promise<void>;
