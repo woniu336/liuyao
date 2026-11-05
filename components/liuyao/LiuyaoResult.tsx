@@ -3,11 +3,12 @@
 /**
  * 六爻结果页（S2 · 单列居中）
  * ==========================
- * 一块纸、一条中轴：卦名 → 公历干支 → 盘面（居中，按容器等比缩放）→ 用神 → 四段解卦。
+ * 一块纸、一条中轴：卦名 → 公历干支 → 盘面（居中，按容器等比缩放）→ 四段解卦。
  *
  * 设计口径（与首页同一套语言：宣纸 + 松墨绿 + 淡金线）：
  *   - 右上角只留「历史排盘」与「截图」，不铺全站导航；
  *   - 底部只留两件事：「重新起卦」与「切换到小成图排盘」（静卦无变，不给切换入口）；
+ *   - 盘面只呈现确定性排盘，不标用神（断语属于解读层，不压在版面上）；
  *   - 不再有「保存」按钮：解卦完成即静默归档进历史排盘，少一个要点的东西。
  */
 
@@ -20,7 +21,6 @@ import SiteHeader from '@/components/site/SiteHeader';
 import InkLandscape from '@/components/site/InkLandscape';
 import { formatSolarDateDisplay, type BoardViewProps } from '@/lib/liuyao/board-view';
 import type { LiuyaoReadingFacts } from '@/lib/readings/types';
-import { parseUseGod, resolveUseGodLine } from '@/lib/liuyao/use-god';
 
 export type ReadingPhase = 'idle' | 'streaming' | 'done' | 'error';
 
@@ -49,32 +49,9 @@ export default function LiuyaoResult({
   const panelRef = useRef<ReadingPanelHandle | null>(null);
   const shotRef = useRef<HTMLDivElement | null>(null);
   const [phase, setPhase] = useState<ReadingPhase>('idle');
-  const [text, setText] = useState('');
   const [shooting, setShooting] = useState(false);
   const archivedRef = useRef(false);
 
-  const useGod = useMemo(() => parseUseGod(text), [text]);
-  const highlight = useMemo(() => {
-    if (!useGod) return null;
-    return resolveUseGodLine(
-      useGod,
-      facts.lines.map((l) => ({
-        position: l.position,
-        relation: l.relation,
-        branch: l.najia.replace(/^[甲乙丙丁戊己庚辛壬癸]/, '').slice(0, 1),
-        isWorld: l.isWorld,
-        isResponse: l.isResponse,
-      })),
-    );
-  }, [useGod, facts.lines]);
-
-  /** 伏神：盘面里就地引出的那一爻（与设计稿「用神：… 伏神：…」同排） */
-  const hiddenSpirit = useMemo(() => {
-    const hit = facts.lines.find((l) => l.hidden);
-    return hit?.hidden ? `${hit.hidden.relation}${hit.hidden.najia.replace(/^[甲乙丙丁戊己庚辛壬癸]/, '')}` : '';
-  }, [facts.lines]);
-
-  const streaming = phase === 'streaming';
   /** 静卦无动爻，小成图无从立变，不给切换入口 */
   const canSwitchXct = useMemo(() => boardProps.lines.some((l) => l.is_moving), [boardProps.lines]);
 
@@ -115,15 +92,6 @@ export default function LiuyaoResult({
       ? boardProps.hexagram_info.changed_name
       : '';
   const solar = formatSolarDateDisplay(boardProps.datetime_info.solar_date, boardProps.datetime_info.ganzhi);
-
-  const primary: { label: string; onClick: () => void; kind: 'stop' | 'start' | 'switch' | 'reset' } = streaming
-    ? { label: '停 止', onClick: () => panelRef.current?.stop(), kind: 'stop' }
-    : phase === 'idle'
-      ? { label: '解 卦', onClick: () => panelRef.current?.start(), kind: 'start' }
-      : canSwitchXct
-        ? { label: '切换到小成图排盘', onClick: onSwitchXct, kind: 'switch' }
-        : { label: '重新起卦', onClick: onReset, kind: 'reset' };
-  const primaryIsReset = primary.kind === 'reset';
 
   return (
     <div className="relative min-h-screen bg-[#F4F1E8] pb-32 text-[#38423C]">
@@ -202,66 +170,32 @@ export default function LiuyaoResult({
             boxShadow: '0 8px 24px rgba(64,69,60,0.08)',
           }}
         >
-          <ResponsiveBoard {...boardProps} highlightPosition={highlight} />
+          <ResponsiveBoard {...boardProps} />
         </div>
 
-        {(useGod || hiddenSpirit) && (
-          <p className="mt-2.5 text-center font-song text-[12px] tracking-[0.06em] text-[#7A7364]">
-            {useGod && (
-              <>
-                用神：
-                <span className="text-[#3F5145]">{useGod.excerpt}</span>
-              </>
-            )}
-            {useGod && hiddenSpirit && <span className="px-2 text-[#C0B49B]">·</span>}
-            {hiddenSpirit && (
-              <>
-                伏神：
-                <span className="text-[#3F5145]">{hiddenSpirit}</span>
-              </>
-            )}
-            {useGod && !highlight && (
-              <span className="pl-2 text-[10.5px] text-[#A79C8A]">
-                {facts.lines.filter((l) => l.relation === useGod.relation).length > 1
-                  ? '（六亲多现，未强指爻位）'
-                  : '（未落在明爻，未强指爻位）'}
-              </span>
-            )}
-          </p>
-        )}
-
-        {/* 解卦 */}
+        {/* 解卦（入口在面板内，底部只留导航动作） */}
         <div className="mt-5">
-          <ReadingPanel
-            ref={panelRef}
-            facts={facts}
-            hideIdleButton
-            onTextChange={setText}
-            onPhaseChange={setPhase}
-          />
-          {phase === 'idle' && (
-            <div className="py-10 text-center">
-              <p className="font-song text-[13px] leading-[2.1] text-[#6E6A5C]">
-                盘面已定，卦气在纸。
-                <br />
-                点下方「解 卦」，依盘面事实作四段解读。
-              </p>
-            </div>
-          )}
+          <ReadingPanel ref={panelRef} facts={facts} onPhaseChange={setPhase} />
         </div>
       </main>
 
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-[#F4F1E8]/95 backdrop-blur-md">
         <div className="mx-auto w-full max-w-[640px] px-4 pt-2.5 sm:px-6" style={{ borderTop: '1px solid #DDD4BE' }}>
           <div className="flex items-center gap-2.5">
-            {!primaryIsReset && (
-              <button type="button" onClick={onReset} className={SECONDARY_BTN}>
+            {canSwitchXct ? (
+              <>
+                <button type="button" onClick={onReset} className={SECONDARY_BTN}>
+                  重新起卦
+                </button>
+                <button type="button" onClick={onSwitchXct} className={`${PRIMARY_BTN} flex-1`}>
+                  切换到小成图排盘
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={onReset} className={`${PRIMARY_BTN} flex-1`}>
                 重新起卦
               </button>
             )}
-            <button type="button" onClick={primary.onClick} className={`${PRIMARY_BTN} flex-1`}>
-              {primary.label}
-            </button>
           </div>
         </div>
       </div>

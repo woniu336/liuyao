@@ -247,21 +247,6 @@ textarea::placeholder {
   .hex.stagger .line { animation: none; }
 }
 
-/* 一横 / 两短横的吉凶形制（小成图九宫用） */
-.verdict-mark {
-  display: inline-flex;
-  width: 9px;
-  gap: 2px;
-  height: 2px;
-  flex-shrink: 0;
-}
-.verdict-mark span {
-  height: 2px;
-  flex: 1;
-  border-radius: 1px;
-  background: currentColor;
-}
-
 /* 基础按钮（CastWorkbench 依赖 .btn / .btn.primary） */
 .btn {
   font: inherit;

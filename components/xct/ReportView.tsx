@@ -16,8 +16,20 @@ interface ReportViewProps {
 }
 
 /**
- * 盘面详录：宫位释义 + 可复制的盘面提要（纯事实，不含用神与结论）。
+ * 盘面详录：宫位释义 + 可复制的盘面提要。
+ *
+ * 只列结构事实（宫位 / 天地盘 / 重卦 / 四象式 / 中五归藏 / 正推链），
+ * 不写「吉凶悔吝」类断语 —— 断语是解读层的事，盘面上给了容易被当成结论。
  */
+
+/** 宫位结构句：只描述天盘地盘与四象式，不给吉凶断语 */
+function structureLine(j: PalaceJudgment): string {
+  if (j.palace === 5) {
+    return `中五宫得「${j.heaven}」，为全盘八方归藏之枢，统摄事态基调。`;
+  }
+  return `天盘${j.heaven}临地盘${j.earth}，合成【${j.hexName || `${j.heaven}之${j.earth}`}】，成「${j.mode || '中立'}」式。`;
+}
+
 export default function ReportView({ board, selectedJudgment, chain, divineTimeInfo }: ReportViewProps) {
   const [activeTab, setActiveTab] = useState<'xct' | 'prompt'>('xct');
   const [copied, setCopied] = useState(false);
@@ -30,8 +42,7 @@ export default function ReportView({ board, selectedJudgment, chain, divineTimeI
     prompt += `\n本卦：${board.ben.upper}上${board.ben.lower}下　变卦：${board.zhi.upper}上${board.zhi.lower}下`;
     prompt += `\n\n一、当前宫位（基础事实）：
 • 宫位：${selectedJudgment.palaceName}，天盘【${selectedJudgment.heaven}】，地盘【${selectedJudgment.earth}】
-• 合成重卦：${selectedJudgment.hexName || `${selectedJudgment.heaven}之${selectedJudgment.earth}`}，成「${selectedJudgment.mode || '中立'}」式，阴阳${selectedJudgment.matched === null ? '—' : selectedJudgment.matched ? '得配' : '失配'}
-• 八断决断：断为「${selectedJudgment.verdict}」
+• 合成重卦：${selectedJudgment.hexName || `${selectedJudgment.heaven}之${selectedJudgment.earth}`}，成「${selectedJudgment.mode || '中立'}」式
 • 中五极枢：天地归藏得「${board.heaven[5]}」
 
 二、气路正推流转（因果事实）：
@@ -73,8 +84,8 @@ export default function ReportView({ board, selectedJudgment, chain, divineTimeI
       </div>
 
       {activeTab === 'xct' && (
-        <div className="space-y-2.5 font-serif text-[12.5px] leading-relaxed text-[#22201B]">
-          <p>{selectedJudgment.meaning}</p>
+        <div className="space-y-2.5 font-serif text-[12.5px] leading-relaxed text-[#2C2A24]">
+          <p>{structureLine(selectedJudgment)}</p>
           <div className="space-y-1 border-t border-[#DED6C6] pt-2 text-[11.5px] text-[#5E5A50]">
             <p>
               <strong className="font-semibold text-[#22201B]">中宫枢纽：</strong>

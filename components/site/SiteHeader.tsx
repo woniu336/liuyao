@@ -70,7 +70,7 @@ export default function SiteHeader({
           {showNav && (
             <nav
               aria-label="主导航"
-              className="flex items-center gap-3 font-song text-[12.5px] text-[#625E52] sm:gap-5 sm:text-[13.5px]"
+              className="flex items-center gap-3 whitespace-nowrap font-song text-[12.5px] text-[#625E52] sm:gap-5 sm:text-[13.5px]"
             >
               {NAV.map((item) =>
                 item.id === active ? (
@@ -91,7 +91,7 @@ export default function SiteHeader({
             </nav>
           )}
           {actions && (
-            <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap sm:gap-3">
               {showNav && <span aria-hidden className="hidden h-4 w-px bg-[#C8BEA8] sm:block" />}
               {actions}
             </div>

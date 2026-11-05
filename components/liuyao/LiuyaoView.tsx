@@ -2,14 +2,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import CastWorkbench from './CastWorkbench';
 import ManualCast from './ManualCast';
-import HexagramBoard from './HexagramBoard';
 import LiuyaoResult from './LiuyaoResult';
 import type { CoinResult } from './types';
 import { castLiuyao, type LiuyaoChart } from '@/lib/liuyao/najia';
 import { buildLiuyaoInput, castTimeInfo, nowTimeInput, parseTimeInput, type CastTimeInfo } from '@/lib/liuyao/ganzhi';
-import { boardToText, chartToBoardProps, type BoardViewProps } from '@/lib/liuyao/board-view';
+import { chartToBoardProps, type BoardViewProps } from '@/lib/liuyao/board-view';
 import { buildLiuyaoReadingFacts } from '@/lib/readings/facts';
 import { decodeCastState } from '@/lib/liuyao/cast-url';
 import { getCaseStore } from '@/lib/store';
@@ -32,6 +32,7 @@ const emptyManual = (): (CoinResult | null)[] => [null, null, null, null, null, 
  * 问句与性别只作落款记录，**不参与任何计算**：本仓库不搬用神推断与五层 DAG。
  */
 export default function LiuyaoView() {
+  const router = useRouter();
   const [question, setQuestion] = useState('');
   const [gender, setGender] = useState<'男' | '女'>('男');
   const [method, setMethod] = useState<CastMode>('coin');
@@ -47,7 +48,6 @@ export default function LiuyaoView() {
     timeInput: string;
   } | null>(null);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const paperRef = useRef<HTMLDivElement | null>(null);
   const restoredRef = useRef(false);
@@ -120,6 +120,7 @@ export default function LiuyaoView() {
     })();
   }, [applyCast]);
 
+  // 重起 = 回到首页的起卦台（本页表单是旧版备用入口，不再作为默认起点）
   const handleReset = () => {
     setResult(null);
     setManual(emptyManual());
@@ -129,7 +130,7 @@ export default function LiuyaoView() {
     setAutoTime(true);
     setTimeInput(nowTimeInput());
     setSavedId(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    router.replace('/');
   };
 
   const handleSave = async () => {
@@ -160,17 +161,6 @@ export default function LiuyaoView() {
     () => (result ? buildLiuyaoReadingFacts(result.chart, result.time, question) : null),
     [result, question],
   );
-
-  const handleCopy = async () => {
-    if (!boardProps) return;
-    try {
-      await navigator.clipboard.writeText(boardToText(boardProps));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      /* 隐私模式或未授权：静默 */
-    }
-  };
 
   const manualComplete = manual.every((v): v is CoinResult => v !== null);
 

@@ -12,12 +12,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock3 } from 'lucide-react';
+import Link from 'next/link';
+import { Clock3, PenLine } from 'lucide-react';
 import { Coin, type CoinSide } from '@/components/liuyao/Coin';
 import GuaCombobox from './GuaCombobox';
 import { Button } from '@/components/ui';
 import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
-import { tossStats, tossThree, tossLines } from '@/lib/liuyao/random';
+import { tossStats, tossThree } from '@/lib/liuyao/random';
 import { encodeCastState } from '@/lib/liuyao/cast-url';
 import { castTimeInfo, nowTimeInput, parseTimeInput } from '@/lib/liuyao/ganzhi';
 import { masksOf, movingPositions } from '@/lib/hexagram/hex-math';
@@ -126,21 +127,6 @@ export default function CastPage() {
     settleTimerRef.current = window.setTimeout(() => finishToss(sum), 1250);
   }, [rolling, complete, finishToss]);
 
-  const quickCast = useCallback(() => {
-    if (rolling || complete) return;
-    const next = [...values];
-    let finalFaces: number[] = [2, 2, 2];
-    for (let i = values.length; i < 6; i += 1) {
-      finalFaces = tossThree();
-      next.push(finalFaces.reduce((total, face) => total + face, 0) as CoinResult);
-    }
-    setCoins(finalFaces.map((face) => (face === 2 ? '字' : '背')));
-    setValues(next);
-    setLastSum(next[5]);
-    if (autoTime) setTimeInput(nowTimeInput());
-    setSheet('choose');
-  }, [rolling, complete, values, autoTime]);
-
   const reset = () => {
     if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
     settledRef.current = true;
@@ -194,23 +180,34 @@ export default function CastPage() {
   return (
     <div className="min-h-screen bg-[#F4F1E8] text-[#38423C]">
       {/* 顶部导航：易林寻踪 · 六爻 / 小成图 / 古籍 */}
-      <SiteHeader active="liuyao" maxWidthClassName="max-w-[1200px]" />
+      <SiteHeader
+        active="liuyao"
+        maxWidthClassName="max-w-[1200px]"
+        actions={
+          <Link
+            href="/cases"
+            className="font-song text-[12px] tracking-[0.06em] text-[#5E5A50] underline-offset-4 transition-colors hover:text-[#8E6337] hover:underline sm:text-[13px]"
+          >
+            历史排盘
+          </Link>
+        }
+      />
 
       {/* 山水题签 */}
       <section className="relative isolate overflow-hidden">
         <InkLandscape />
-        <div className="relative z-10 mx-auto flex min-h-[168px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-5 pt-2 text-center sm:min-h-[188px] lg:min-h-[214px] lg:pb-6">
+        <div className="relative z-10 mx-auto flex min-h-[146px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-4 pt-1 text-center sm:min-h-[162px] lg:min-h-[182px] lg:pb-5">
           <h1 className="font-song text-[34px] font-semibold leading-none tracking-[0.26em] text-[#304239] sm:text-[40px] lg:text-[44px]">
             起 卦
           </h1>
-          <p className="mt-2.5 font-kai text-[12px] tracking-[0.14em] text-[#9A805A] sm:text-[13px]">
+          <p className="mt-3 font-kai text-[14px] tracking-[0.16em] text-[#96794F] sm:text-[15px] lg:text-[16px]">
             取象于天地，观变于阴阳
           </p>
         </div>
       </section>
 
       {/* 主纸笺：PC 扩展为宽幅宣纸，内容仍沿中轴排列 */}
-      <main className="relative z-10 mx-auto -mt-3 w-full max-w-[1040px] px-3 pb-16 sm:px-5 lg:px-8">
+      <main className="relative z-10 mx-auto -mt-7 w-full max-w-[960px] px-3 pb-16 sm:px-5 lg:px-8">
         <div
           className="relative overflow-hidden bg-[#FCF9F0] px-4 py-5 sm:px-7 sm:py-7 lg:px-12 lg:py-9"
           style={{ border: '1px solid rgba(179,160,125,0.52)', borderRadius: 14, boxShadow: '0 8px 30px rgba(64,69,60,0.10)' }}
@@ -359,7 +356,8 @@ export default function CastPage() {
               <div className="mb-2 flex items-center justify-center gap-3 font-song text-[12.5px] tracking-[0.28em] text-[#575A50]">
                 <span className="h-px w-6 bg-[#B89C6C]/65" />卦 象<span className="h-px w-6 bg-[#B89C6C]/65" />
               </div>
-              <div className="mx-auto flex w-[190px] flex-col gap-[8px] py-2 sm:w-[230px]">
+              <div className="relative flex justify-center py-2">
+              <div className="flex w-[190px] flex-col gap-[8px] sm:w-[230px]">
                 {Array.from({ length: 6 }, (_, idx) => {
                   const pos = 6 - idx;
                   const v = values[pos - 1];
@@ -382,23 +380,32 @@ export default function CastPage() {
                   );
                 })}
               </div>
+              <button
+                type="button"
+                onClick={() => setSheet('manual')}
+                className="press absolute right-0 top-1/2 inline-flex h-9 -translate-y-1/2 items-center gap-1.5 rounded-[3px] border border-[#9C7A48] bg-[#FBF7EC] px-3 font-song text-[12px] tracking-[0.08em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
+              >
+                <PenLine size={13} strokeWidth={1.7} />
+                手动指定
+              </button>
+              </div>
               <p className="mt-1 text-center font-kai text-[11.5px] tracking-[0.1em] text-[#928774]">
                 自初爻起，自下而上{movingList.length ? `　·　动 ${movingList.map((p) => POS_NAMES[p - 1]).join('、')}` : ''}
               </p>
             </div>
 
             {/* 墨绿漆面 + 赭金双边按钮 */}
-            <div className="mx-auto mt-5 max-w-[420px] rounded-full border border-[#9C7A48] p-[3px] shadow-[0_2px_7px_rgba(96,76,43,0.16)]">
-              <button type="button" disabled={rolling || complete} onClick={doToss} className="press h-[52px] w-full rounded-full border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[17px] font-medium tracking-[0.4em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60">
+            <div className="mx-auto mt-5 max-w-[300px] rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_7px_rgba(96,76,43,0.16)]">
+              <button type="button" disabled={rolling || complete} onClick={doToss} className="press h-[50px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[17px] font-medium tracking-[0.4em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60">
                 {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
               </button>
             </div>
 
-            <div className="mt-3 flex items-center justify-center gap-6 font-song text-[12px] text-[#6D746A]">
-              {!complete && <button type="button" onClick={quickCast} className="press hover:text-[#8E6337]">一键起卦</button>}
-              {castCount > 0 && <button type="button" onClick={reset} className="press hover:text-[#8E6337]">重新起卦</button>}
-              <button type="button" onClick={() => setSheet('manual')} className="press hover:text-[#8E6337]">手动指定</button>
-            </div>
+            {castCount > 0 && (
+              <div className="mt-3 flex items-center justify-center font-song text-[12px] text-[#6D746A]">
+                <button type="button" onClick={reset} className="press hover:text-[#8E6337]">重新起卦</button>
+              </div>
+            )}
 
             {stats && (
               <details className="mt-3 text-center">
