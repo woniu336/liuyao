@@ -1,39 +1,49 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+/**
+ * 六爻结果页（S2 · 单列居中）
+ * ==========================
+ * 一块纸、一条中轴：卦名 → 公历干支 → 盘面（居中，按容器等比缩放）→ 用神 → 四段解卦。
+ *
+ * 设计口径（与首页同一套语言：宣纸 + 松墨绿 + 淡金线）：
+ *   - 右上角只留「历史排盘」与「截图」，不铺全站导航；
+ *   - 底部只留两件事：「重新起卦」与「切换到小成图排盘」（静卦无变，不给切换入口）；
+ *   - 不再有「保存」按钮：解卦完成即静默归档进历史排盘，少一个要点的东西。
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, RotateCcw } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import ResponsiveBoard from './ResponsiveBoard';
 import ReadingPanel, { type ReadingPanelHandle } from './ReadingPanel';
-import { Button } from '@/components/ui';
-import type { BoardViewProps } from '@/lib/liuyao/board-view';
+import SiteHeader from '@/components/site/SiteHeader';
+import InkLandscape from '@/components/site/InkLandscape';
+import { formatSolarDateDisplay, type BoardViewProps } from '@/lib/liuyao/board-view';
 import type { LiuyaoReadingFacts } from '@/lib/readings/types';
 import { parseUseGod, resolveUseGodLine } from '@/lib/liuyao/use-god';
 
 export type ReadingPhase = 'idle' | 'streaming' | 'done' | 'error';
 
-/**
- * 六爻结果页（S2 · 单列居中）
- * ==========================
- * 一块纸、一条中轴：卦名 → 干支 → 盘面（居中，按容器等比缩放）→ 用神 → 解卦。
- * 右上角「截图」把这块确定性盘面导出为 PNG（不做任何推断，只截纸）。
- * 底部固定：解卦 / 停止、保存、重起。
- */
+const PRIMARY_BTN =
+  'press inline-flex h-12 items-center justify-center rounded-[3px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] px-4 font-song text-[14px] tracking-[0.16em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:opacity-60';
+
+const SECONDARY_BTN =
+  'press inline-flex h-12 shrink-0 items-center justify-center rounded-[3px] border border-[#C3B79E] bg-[#FBF7EC] px-5 font-song text-[14px] tracking-[0.16em] text-[#3F4A42] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]';
+
 export default function LiuyaoResult({
   boardProps,
   facts,
   question,
   onReset,
   onSave,
-  saved,
   onSwitchXct,
 }: {
   boardProps: BoardViewProps;
   facts: LiuyaoReadingFacts;
   question: string;
   onReset: () => void;
+  /** 解卦完成后的静默归档（历史排盘） */
   onSave: () => Promise<void> | void;
-  saved: boolean;
   onSwitchXct: () => void;
 }) {
   const panelRef = useRef<ReadingPanelHandle | null>(null);
@@ -41,6 +51,7 @@ export default function LiuyaoResult({
   const [phase, setPhase] = useState<ReadingPhase>('idle');
   const [text, setText] = useState('');
   const [shooting, setShooting] = useState(false);
+  const archivedRef = useRef(false);
 
   const useGod = useMemo(() => parseUseGod(text), [text]);
   const highlight = useMemo(() => {
@@ -57,7 +68,22 @@ export default function LiuyaoResult({
     );
   }, [useGod, facts.lines]);
 
+  /** 伏神：盘面里就地引出的那一爻（与设计稿「用神：… 伏神：…」同排） */
+  const hiddenSpirit = useMemo(() => {
+    const hit = facts.lines.find((l) => l.hidden);
+    return hit?.hidden ? `${hit.hidden.relation}${hit.hidden.najia.replace(/^[甲乙丙丁戊己庚辛壬癸]/, '')}` : '';
+  }, [facts.lines]);
+
   const streaming = phase === 'streaming';
+  /** 静卦无动爻，小成图无从立变，不给切换入口 */
+  const canSwitchXct = useMemo(() => boardProps.lines.some((l) => l.is_moving), [boardProps.lines]);
+
+  // 解卦读完即归档（用户不再需要点「保存」）
+  useEffect(() => {
+    if (phase !== 'done' || archivedRef.current) return;
+    archivedRef.current = true;
+    void onSave();
+  }, [phase, onSave]);
 
   /** 截图：只截盘面那张纸（确定性排盘），不含解卦文字 */
   const handleShot = async () => {
@@ -83,75 +109,124 @@ export default function LiuyaoResult({
     }
   };
 
+  const changedName =
+    boardProps.hexagram_info.changed_name &&
+    boardProps.hexagram_info.changed_name !== boardProps.hexagram_info.base_name
+      ? boardProps.hexagram_info.changed_name
+      : '';
+  const solar = formatSolarDateDisplay(boardProps.datetime_info.solar_date, boardProps.datetime_info.ganzhi);
+
+  const primary: { label: string; onClick: () => void; kind: 'stop' | 'start' | 'switch' | 'reset' } = streaming
+    ? { label: '停 止', onClick: () => panelRef.current?.stop(), kind: 'stop' }
+    : phase === 'idle'
+      ? { label: '解 卦', onClick: () => panelRef.current?.start(), kind: 'start' }
+      : canSwitchXct
+        ? { label: '切换到小成图排盘', onClick: onSwitchXct, kind: 'switch' }
+        : { label: '重新起卦', onClick: onReset, kind: 'reset' };
+  const primaryIsReset = primary.kind === 'reset';
+
   return (
-    <div className="min-h-screen bg-water-1 pb-28">
-      {/* 顶栏：右上是截图 */}
-      <header className="safe-top sticky top-0 z-20 bg-water-1/85 backdrop-blur-md">
-        <div className="mx-auto flex h-[52px] w-full max-w-[560px] items-center justify-between px-5">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="press font-song text-[13px] text-ink-700 underline-offset-4 hover:underline">
-              六爻
+    <div className="relative min-h-screen bg-[#F4F1E8] pb-32 text-[#38423C]">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[260px] overflow-hidden opacity-80">
+        <InkLandscape />
+      </div>
+
+      <SiteHeader
+        sticky
+        showNav={false}
+        maxWidthClassName="max-w-[720px]"
+        actions={
+          <>
+            <Link
+              href="/cases"
+              className="font-song text-[12.5px] tracking-[0.06em] text-[#5E5A50] underline-offset-4 transition-colors hover:text-[#8E6337] hover:underline"
+            >
+              历史排盘
             </Link>
-            <span className="text-ink-400">·</span>
-            <button type="button" onClick={onSwitchXct} className="press font-song text-[13px] text-ink-700 underline-offset-4 hover:underline">
-              小成图
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/cases" className="press text-[11.5px] text-ink-500 underline-offset-4 hover:underline">
-              卦例
-            </Link>
+            <span aria-hidden className="h-4 w-px bg-[#C8BEA8]" />
             <button
               type="button"
               onClick={() => void handleShot()}
               disabled={shooting}
               aria-label="截图确定性排盘"
               title="截图（确定性排盘）"
-              className="press flex h-8 items-center gap-1.5 rounded-xs border border-line-strong px-2.5 text-[11.5px] text-ink-700 transition-colors hover:border-gold-500 hover:text-ink-900 disabled:opacity-50"
+              className="press flex h-8 items-center gap-1.5 rounded-full border border-[#C3B79E] bg-[#FCF9F0]/70 px-3 font-song text-[12px] text-[#4A4438] transition-colors hover:border-[#9A7040] hover:text-[#8E6337] disabled:opacity-50"
             >
-              <Camera size={13} />
+              <Camera size={13} strokeWidth={1.7} />
               {shooting ? '生成中' : '截图'}
             </button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      <main className="mx-auto w-full max-w-[560px] px-5">
-        {/* 卦名：单列中轴 */}
-        <div className="pb-3 pt-4 text-center">
-          <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-1">
-            <h1 className="font-song text-[24px] font-semibold tracking-[0.12em] text-ink-900">
+      <main className="relative z-10 mx-auto w-full max-w-[640px] px-4 sm:px-6">
+        {/* 卦名：本卦 ⇌ 变卦 */}
+        <div className="pb-1 pt-5 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <h1 className="font-song text-[26px] font-semibold leading-tight tracking-[0.16em] text-[#2F4438] sm:text-[32px]">
               {boardProps.hexagram_info.base_name}
             </h1>
-            {boardProps.hexagram_info.changed_name &&
-              boardProps.hexagram_info.changed_name !== boardProps.hexagram_info.base_name && (
-                <>
-                  <span className="font-kai text-[12px] text-gold-600">之</span>
-                  <span className="font-song text-[18px] text-ink-800">{boardProps.hexagram_info.changed_name}</span>
-                </>
-              )}
+            {changedName && (
+              <>
+                <span aria-hidden className="font-song text-[15px] text-[#8E6337]">
+                  ⇌
+                </span>
+                <span className="font-song text-[21px] font-semibold tracking-[0.14em] text-[#2F4438] sm:text-[26px]">
+                  {changedName}
+                </span>
+              </>
+            )}
           </div>
-          <p className="mt-1.5 text-[11px] tabular-nums tracking-[0.04em] text-ink-500">
-            {boardProps.datetime_info.ganzhi} · 旬空 {boardProps.datetime_info.void_branches.join('')}
+          <p className="mt-2 font-song text-[11.5px] tabular-nums tracking-[0.04em] text-[#7C7668]">
+            公历：{solar}　·　{boardProps.datetime_info.ganzhi}
           </p>
           {question.trim() && (
-            <p className="mt-1 font-song text-[12.5px] text-ink-600">「{question.trim()}」</p>
+            <p className="mt-1.5 font-kai text-[12.5px] tracking-[0.04em] text-[#6E6A5C]">「{question.trim()}」</p>
           )}
+        </div>
+
+        {/* 太极分隔 */}
+        <div aria-hidden className="my-3 flex items-center justify-center gap-3">
+          <span className="h-px w-10 bg-[#CBBFA8]/80" />
+          <span className="font-song text-[13px] text-[#8E6337]">☯</span>
+          <span className="h-px w-10 bg-[#CBBFA8]/80" />
         </div>
 
         {/* 盘面：一张纸，居中 */}
         <div
           ref={shotRef}
-          className="mx-auto bg-paper-0 px-4 py-5 shadow-[0_2px_12px_rgba(58,70,74,0.09)]"
-          style={{ borderRadius: 2, border: '1px solid var(--hairline)' }}
+          className="mx-auto w-full max-w-[440px] bg-[#FBF7EC] px-4 py-4 sm:px-5"
+          style={{
+            borderRadius: 10,
+            border: '1px solid rgba(179,160,125,0.55)',
+            boxShadow: '0 8px 24px rgba(64,69,60,0.08)',
+          }}
         >
           <ResponsiveBoard {...boardProps} highlightPosition={highlight} />
         </div>
 
-        {useGod && (
-          <p className="mt-2 text-center text-[11px] text-gold-600">
-            用神 {useGod.excerpt}
-            {highlight ? ` · 已标第 ${highlight} 爻` : ' · 六亲多现，未强指爻位'}
+        {(useGod || hiddenSpirit) && (
+          <p className="mt-2.5 text-center font-song text-[12px] tracking-[0.06em] text-[#7A7364]">
+            {useGod && (
+              <>
+                用神：
+                <span className="text-[#3F5145]">{useGod.excerpt}</span>
+              </>
+            )}
+            {useGod && hiddenSpirit && <span className="px-2 text-[#C0B49B]">·</span>}
+            {hiddenSpirit && (
+              <>
+                伏神：
+                <span className="text-[#3F5145]">{hiddenSpirit}</span>
+              </>
+            )}
+            {useGod && !highlight && (
+              <span className="pl-2 text-[10.5px] text-[#A79C8A]">
+                {facts.lines.filter((l) => l.relation === useGod.relation).length > 1
+                  ? '（六亲多现，未强指爻位）'
+                  : '（未落在明爻，未强指爻位）'}
+              </span>
+            )}
           </p>
         )}
 
@@ -166,7 +241,7 @@ export default function LiuyaoResult({
           />
           {phase === 'idle' && (
             <div className="py-10 text-center">
-              <p className="font-song text-[13px] leading-[2.1] text-ink-500">
+              <p className="font-song text-[13px] leading-[2.1] text-[#6E6A5C]">
                 盘面已定，卦气在纸。
                 <br />
                 点下方「解 卦」，依盘面事实作四段解读。
@@ -176,24 +251,17 @@ export default function LiuyaoResult({
         </div>
       </main>
 
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-water-1/92 backdrop-blur-md">
-        <div className="mx-auto w-full max-w-[560px] px-5 pt-2.5" style={{ borderTop: '1px solid var(--hairline)' }}>
-          <div className="flex items-center gap-2">
-            <Button variant="line" size="md" onClick={() => void onSave()} disabled={saved} className="!px-3">
-              {saved ? '已存' : '保存'}
-            </Button>
-            <Button variant="line" size="md" onClick={onReset} className="!px-3" aria-label="重起一卦">
-              <RotateCcw size={14} />
-            </Button>
-            {streaming ? (
-              <Button variant="line" size="md" block onClick={() => panelRef.current?.stop()}>
-                停 止
-              </Button>
-            ) : (
-              <Button size="md" block onClick={() => panelRef.current?.start()} className="!bg-mist-900 hover:!bg-ink-900">
-                {phase === 'idle' ? '解 卦' : '再解一次'}
-              </Button>
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-[#F4F1E8]/95 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-[640px] px-4 pt-2.5 sm:px-6" style={{ borderTop: '1px solid #DDD4BE' }}>
+          <div className="flex items-center gap-2.5">
+            {!primaryIsReset && (
+              <button type="button" onClick={onReset} className={SECONDARY_BTN}>
+                重新起卦
+              </button>
             )}
+            <button type="button" onClick={primary.onClick} className={`${PRIMARY_BTN} flex-1`}>
+              {primary.label}
+            </button>
           </div>
         </div>
       </div>

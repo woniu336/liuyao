@@ -5,7 +5,7 @@
 ## 先读
 
 - `AGENTS.md`（若有）与 `README.md`
-- 上一提交：`703fee4 design(home): 依新设计图重做首页并收紧标题留白`
+- 上一提交：`1821fa6 docs: 新增 NEXT.md 交接文档，README 指向`
 - 工作树应为干净；dev 服务在 <http://localhost:3001>（vinext/workerd + 本地 D1）
 
 ## 已完成（不要重做）
@@ -15,13 +15,25 @@
 - **随机源** `lib/liuyao/random.ts`：逐位取 Uint32 LSB，Web Crypto 实现，缺 crypto 即 fail-closed；
   50 万掷实测 6:0.1255 / 7:0.3746 / 8:0.3753 / 9:0.1246。
 - **首页** `components/cast/CastPage.tsx` 已按设计图重做：淡墨山水 `InkLandscape` + 宣纸求测笺；
-  导航「起卦 / 卦例 / 易学典籍 / 关于」；页首只留「取象于天地，观变于阴阳」，
-  标题 34/40/44px，hero 168/188/214px，内容宽 `max-w-[1040px]`。
+  页首只留「取象于天地，观变于阴阳」，标题 34/40/44px，hero 168/188/214px，内容宽 `max-w-[1040px]`。
 - **六十四卦可输入下拉** `components/cast/GuaCombobox.tsx` + `lib/liuyao/hexagram-index.ts`（旧 `GuaPicker` 已删）。
 - **结果页** `components/liuyao/LiuyaoResult.tsx` 单列居中 + 右上「截图确定性排盘」（`html-to-image` toPng pixelRatio 3）。
 - `/classics` 与 `/about` 已建（classics 是分类 / 来源校核空态）。
+- **站名与导航统一**：站名「易林寻踪」（`app/layout.tsx` 标题同），
+  共享页头 `components/site/SiteHeader.tsx`（左篆印 + 站名，右 六爻 / 小成图 / 古籍，可插 `actions`），
+  首页、`/cases`、`/classics` 已接入；结果页用 `showNav={false}` + 「历史排盘 / 截图」。
+- **起卦弹窗**：卦成弹窗与手动指定弹窗都居中（不再是底部抽屉）；**静卦不出小成图入口**
+  （无动爻则小成图无以立变），主按钮为墨绿渐变。
+- **六爻结果页按设计稿重做**（`components/liuyao/LiuyaoResult.tsx`）：
+  卦名 `本卦 ⇌ 变卦` + 公历干支 + 太极分隔 + 淡金边盘面纸 + 「用神 / 伏神」行；
+  解卦四段用「圆标序号 + 标题 + 发丝线」；底部只留「重新起卦」与「切换到小成图排盘」（静卦退化为单键重起）。
+  「保存」按钮已删：**解卦完成即静默归档**进历史排盘（`onSave` 在 phase=done 时调一次）。
+  「再解一次」已删（面板只留 停止 / 重试 / 复制 / 所呈事实抽屉——抽屉是给模型的事实包，必须保留）。
+- **用神高亮**（`lib/liuyao/use-god.ts`）：新增「以财爻为用」类取用句（含单字简称）解析；
+  地支只在全文该六亲唯一出现时补齐；**给了地支就只认精确匹配**，不再回退到「六亲唯一」去猜。
+- `/cases` 更名「历史排盘」（UI 文案 + metadata），小成图页文案同步。
 - 全局 `<footer>` 已从 `app/layout.tsx` 删除。
-- `npm run check` = check:schema + check:portability + 110 项测试，全绿；`next build` 与 `build:vinext` 均通过。
+- `npm run check` = check:schema + check:portability + 113 项测试，全绿；`next build` 与 `build:vinext` 均通过。
 
 ## 硬约束（违反即返工）
 
@@ -42,7 +54,7 @@
 ```bash
 npm run dev:vinext     # 3001，带 D1 绑定（改完后端/接口用这个验证）
 npm run dev:bg         # 后台 + logs/dev.out.log
-npm run check          # schema + portability + 110 测试
+npm run check          # schema + portability + 113 测试
 npm run build && npm run build:vinext
 ```
 
@@ -54,8 +66,7 @@ UI 实测脚本写在 `C:\Users\奇哥\Desktop\bazi-web\scratch\*.mjs`（那里�
 
 ## 下一步（按序）
 
-1. **S2 盘面收尾**：字号线宽 / 神煞字号统一；用神高亮接上 `lib/liuyao/use-god.ts`
-   （`parseUseGod` + `resolveUseGodLine`，`HexagramBoard` 已有 `highlightPosition` / `highlightLabel` props）。
+1. **S2 盘面收尾**：字号线宽 / 神煞字号（看板 12.5 vs 12）统一 —— 版式不可动，只能微调字重。
 2. **S3 小成图解卦 UI**：复用 `components/liuyao/ReadingPanel.tsx` 的禅意面板，
    走 `app/api/read/prompt-xct.ts`，四段定宫 / 四象 / 推演 / 应期。
 3. **`/classics` 填入经校核的周易原文**（来源与版本必须标注，未核校就保持空态）。

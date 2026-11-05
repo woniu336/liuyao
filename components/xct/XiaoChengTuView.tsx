@@ -215,7 +215,7 @@ export default function XiaoChengTuView() {
     manual?: { benUpper: Trigram; benLower: Trigram; zhiUpper: Trigram; zhiLower: Trigram };
   }
 
-  /** 起盘；从卦例夹复原时用 override 直接给值（setState 是异步的，不能读完再算） */
+  /** 起盘；从历史排盘复原时用 override 直接给值（setState 是异步的，不能读完再算） */
   const runCast = (override?: CastOverride) => {
     setNotice('');
     try {
@@ -275,7 +275,7 @@ export default function XiaoChengTuView() {
     }
   };
 
-  // 从卦例夹打开：?case=<id>
+  // 从历史排盘打开：?case=<id>
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
@@ -307,7 +307,7 @@ export default function XiaoChengTuView() {
       const store = await getCaseStore();
       const record = await store.get(id);
       if (!record || record.kind !== 'xct' || record.input.kind !== 'xct') {
-        setNotice('卦例不存在或类型不符');
+        setNotice('该记录不存在或类型不符');
         return;
       }
       const inp = record.input;
@@ -406,13 +406,13 @@ export default function XiaoChengTuView() {
               href="/cases"
               className="hidden font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline sm:inline"
             >
-              卦例夹
+              历史排盘
             </Link>
             <button
               type="button"
               onClick={() => void handleSave()}
               disabled={Boolean(savedId)}
-              title={savedId ? '已保存到卦例夹' : '保存起卦输入，随时重排'}
+              title={savedId ? '已存入历史排盘' : '保存起卦输入，随时重排'}
               className={`flex cursor-pointer items-center gap-1.5 rounded-[2px] border px-2.5 py-1.5 font-serif text-[11.5px] transition-colors ${
                 savedId
                   ? 'cursor-default border-[#DED6C6] text-[#8c8272]'
@@ -420,7 +420,7 @@ export default function XiaoChengTuView() {
               }`}
             >
               <Star size={12} fill={savedId ? 'currentColor' : 'none'} />
-              <span>{savedId ? '已保存' : '保存卦例'}</span>
+              <span>{savedId ? '已保存' : '存入历史'}</span>
             </button>
             <Link
               href="/"
@@ -512,7 +512,7 @@ export default function XiaoChengTuView() {
             href="/cases"
             className="font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline"
           >
-            卦例夹
+            历史排盘
           </Link>
           <Link
             href="/"

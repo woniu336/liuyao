@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { RotateCcw, Star } from 'lucide-react';
 import CastWorkbench from './CastWorkbench';
 import ManualCast from './ManualCast';
 import HexagramBoard from './HexagramBoard';
@@ -85,7 +84,7 @@ export default function LiuyaoView() {
     [autoTime, timeInput, method, applyCast],
   );
 
-  // 从卦例夹打开：?case=<id> —— 用记录里的输入重排同一卦
+  // 从历史排盘打开：?case=<id> —— 用记录里的输入重排同一卦
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
@@ -134,7 +133,7 @@ export default function LiuyaoView() {
   };
 
   const handleSave = async () => {
-    if (!result) return;
+    if (!result || savedId) return;
     try {
       const record = buildLiuyaoRecord({
         chart: result.chart,
@@ -192,7 +191,6 @@ export default function LiuyaoView() {
         question={question}
         onReset={handleReset}
         onSave={handleSave}
-        saved={Boolean(savedId)}
         onSwitchXct={switchToXct}
       />
     );
@@ -211,7 +209,7 @@ export default function LiuyaoView() {
           </div>
           <div className="flex shrink-0 items-center gap-3 font-serif text-[11.5px] text-[#5e5a50]">
             <Link href="/cases" className="underline-offset-4 transition-colors hover:text-[#8e3a2c] hover:underline">
-              卦例夹
+              历史排盘
             </Link>
             <Link href="/" className="underline-offset-4 transition-colors hover:text-[#8e3a2c] hover:underline">
               返回首页

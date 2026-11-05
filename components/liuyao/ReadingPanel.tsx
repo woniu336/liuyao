@@ -17,9 +17,12 @@ type Phase = 'idle' | 'streaming' | 'done' | 'error';
 interface Block {
   type: 'h' | 'p';
   text: string;
+  /** 标题的序号（一 / 二 / 三…），仅 type === 'h' 时有 */
+  numeral?: string;
 }
 
-const HEADING_LINE = /^(?:[一二三四五六七八九十]+、|[【〔][^】〕]+[】〕])/;
+const HEADING_LINE =
+  /^(?:[【〔]\s*([一二三四五六七八九十]+)\s*[】〕]|([一二三四五六七八九十]+)\s*[、.．])\s*(.+)$/;
 
 /** 按行解析：短标题行单独成段，其余行合并成段落（处理「标题+正文同一段」） */
 function parseBlocks(text: string): Block[] {
@@ -37,9 +40,12 @@ function parseBlocks(text: string): Block[] {
       flush();
       continue;
     }
-    if (HEADING_LINE.test(line) && line.length <= 24) {
+    const m = line.match(HEADING_LINE);
+    const numeral = m ? (m[1] ?? m[2]) : null;
+    const title = m ? m[3].trim() : '';
+    if (numeral && title && title.length <= 18) {
       flush();
-      out.push({ type: 'h', text: line });
+      out.push({ type: 'h', text: title, numeral });
       continue;
     }
     buf.push(line);
@@ -48,16 +54,21 @@ function parseBlocks(text: string): Block[] {
   return out;
 }
 
+/**
+ * 四段式排版：① 取用 → ② 盘面 → ③ 走势 → ④ 应期
+ * 序号入圆标，标题后接一根发丝线，正文窄栏宽行距，不用报告体。
+ */
 function renderBlocks(text: string) {
   return parseBlocks(text).map((block, i) =>
     block.type === 'h' ? (
-      <h3
-        key={i}
-        data-block="h"
-        className="mb-2 mt-5 flex items-baseline gap-2 font-serif text-[12px] tracking-[0.2em] text-[#8A7A60] first:mt-0"
-      >
-        <span className="inline-block h-px w-4 translate-y-[-3px] bg-[#CBBFA8]" />
-        {block.text}
+      <h3 key={i} data-block="h" className="mb-3 mt-7 flex items-center gap-2.5 first:mt-0">
+        <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full bg-[#3E5148] font-song text-[11.5px] leading-none text-[#F6EFDC]">
+          {block.numeral}
+        </span>
+        <span className="shrink-0 font-song text-[14.5px] font-semibold tracking-[0.14em] text-[#2E3B33]">
+          {block.text}
+        </span>
+        <span aria-hidden className="h-px flex-1 bg-[#D9CFB8]" />
       </h3>
     ) : (
       <p
@@ -246,16 +257,8 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
   }
 
   return (
-    <section className="mt-7 border-t border-[#E8DFC9] pt-6">
-      <div className="relative mx-auto max-w-[640px] pl-7 sm:pl-9">
-        <span
-          aria-hidden
-          className="absolute left-0 top-1 select-none font-serif text-[11px] tracking-[0.32em] text-[#8E3A2C]/50"
-          style={{ writingMode: 'vertical-rl' }}
-        >
-          观象
-        </span>
-
+    <section className="mt-7">
+      <div className="relative mx-auto max-w-[680px]">
         {phase === 'streaming' && !text && (
           <div className="flex items-center gap-2 py-6 font-serif text-[12px] text-[#9C907F]">
             <span className="inline-flex gap-1">
@@ -291,11 +294,11 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
             <button type="button" onClick={stop} className="cursor-pointer tracking-[0.2em] hover:text-[#22201B]">
               停 止
             </button>
-          ) : (
+          ) : phase === 'error' ? (
             <button type="button" onClick={() => void run()} className="cursor-pointer tracking-[0.2em] hover:text-[#22201B]">
-              {phase === 'error' ? '重 试' : '再解一次'}
+              重 试
             </button>
-          )}
+          ) : null}
           {text && (
             <button type="button" onClick={() => void copy()} className="cursor-pointer hover:text-[#22201B]">
               {copied ? '已复制' : '复制'}
@@ -306,6 +309,7 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
           </button>
         </div>
 
+        {/* 事实抽屉：隐藏展开，能看见到底发送了什么（不含任何密钥） */}
         {showFacts && (
           <pre className="mt-3 max-h-[260px] overflow-auto whitespace-pre-wrap border border-[#E4DCCB] bg-[#FBF8F1] p-3 font-mono text-[10.5px] leading-relaxed text-[#7C7365]">
             {JSON.stringify(facts, null, 2)}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import SiteHeader from '@/components/site/SiteHeader';
 
 export const metadata: Metadata = {
   title: '易学典籍 | 六爻',
@@ -16,20 +16,7 @@ const shelves = [
 export default function ClassicsPage() {
   return (
     <div className="min-h-screen bg-[#F4F1E8] text-[#38423C]">
-      <header className="border-b border-[#C8BEA8]/60 bg-[#F6F2E9]/90">
-        <div className="mx-auto flex h-[58px] max-w-[1120px] items-center justify-between px-4 sm:px-7 lg:px-10">
-          <Link href="/" className="flex items-center gap-3 text-[#35443D]">
-            <span className="flex h-9 w-9 items-center justify-center border border-[#9A7040] font-song text-[20px] text-[#8E6337]" style={{ borderRadius: 3 }}>易</span>
-            <span className="font-song text-[20px] font-semibold tracking-[0.12em]">六爻</span>
-          </Link>
-          <nav className="flex items-center gap-3 font-song text-[12px] text-[#625E52] sm:gap-6 sm:text-[14px]">
-            <Link href="/" className="hover:text-[#8E6337]">起卦</Link>
-            <Link href="/cases" className="hover:text-[#8E6337]">卦例</Link>
-            <Link href="/classics" className="border-b border-[#49675B] pb-1 font-medium text-[#34483E]">易学典籍</Link>
-            <Link href="/about" className="hidden hover:text-[#8E6337] sm:inline">关于</Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="classics" />
 
       <main className="mx-auto w-full max-w-[920px] px-4 pb-20 pt-14 sm:px-7 sm:pt-20">
         <div className="text-center">

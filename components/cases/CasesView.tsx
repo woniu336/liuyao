@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 卦例夹：本地保存的卦例列表。
+ * 历史排盘：本地保存的排盘记录列表。
  *
  * 现在读的是 localStorage（lib/store 的本地实现）；换成 D1 后这个组件不用改，
  * 因为 getCaseStore() 返回的接口本来就是异步的。
@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Star, Trash2 } from 'lucide-react';
+import SiteHeader from '@/components/site/SiteHeader';
 import { getCaseStore } from '@/lib/store';
 import { caseTimeLabel } from '@/lib/cases/record';
 import type { CaseRecord } from '@/lib/store/types';
@@ -52,21 +53,23 @@ export default function CasesView() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-3 pb-24 pt-6 font-serif sm:px-5 sm:pt-9">
+    <div className="min-h-screen bg-[#F4F1E8] text-[#38423C]">
+      <SiteHeader maxWidthClassName="max-w-[820px]" />
+      <div className="mx-auto w-full max-w-[760px] px-3 pb-24 pt-7 font-serif sm:px-5 sm:pt-9">
       <header className="mb-5 flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5">
           <span className="inline-block h-[5px] w-[5px] rounded-full bg-[#8E3A2C]" />
-          <h1 className="text-[19px] font-semibold tracking-[0.16em] text-[#22201b] sm:text-[21px]">卦例夹</h1>
+          <h1 className="text-[19px] font-semibold tracking-[0.16em] text-[#22201b] sm:text-[21px]">历史排盘</h1>
         </div>
         <Link href="/" className="shrink-0 text-[11.5px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline">
-          返回首页
+          返回起卦
         </Link>
       </header>
 
       <p className="mb-4 pl-[18px] text-[11.5px] leading-relaxed text-[#7c7365]">
         只保存起卦输入（时间 / 投掷 / 起卦法），打开时由引擎重新排出同一卦。
         {mode === 'remote'
-          ? '已保存到云端（按本机匿名声明的设备 ID 归属）：换浏览器或清除 Cookie 会得到新的卦例夹。'
+          ? '已保存到云端（按本机匿名声明的设备 ID 归属）：换浏览器或清除 Cookie 会得到新的历史排盘。'
           : '当前保存在本机浏览器；完整云端存储请用 npm run dev:vinext 或线上环境。'}
       </p>
 
@@ -80,9 +83,9 @@ export default function CasesView() {
 
       {items && items.length === 0 && (
         <div className="rounded-md border border-[#E0D8C9] bg-[#FFFDF8] px-5 py-12 text-center">
-          <p className="text-[13px] text-[#5e5a50]">还没有保存的卦例。</p>
+          <p className="text-[13px] text-[#5e5a50]">还没有排盘记录。</p>
           <p className="mt-2 text-[11.5px] text-[#8c8272]">
-            起一卦后，在盘面右上角点「保存卦例」即可收藏到这里。
+            六爻解卦完成会自动归档到这里；小成图在盘面右上角点「保存卦例」即会记录。
           </p>
           <div className="mt-4 flex items-center justify-center gap-3 text-[12px]">
             <Link href="/liuyao" className="rounded-[2px] border border-[#CBBFA8] px-3 py-1.5 text-[#5e5a50] hover:border-[#8a8378] hover:text-[#22201b]">
@@ -162,6 +165,7 @@ export default function CasesView() {
           ))}
         </ul>
       )}
+      </div>
     </div>
   );
 }

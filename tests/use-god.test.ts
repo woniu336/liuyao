@@ -41,6 +41,27 @@ describe('用神解析（仅供高亮，不参与断卦）', () => {
     expect(hint?.relation).toBe('子孙');
   });
 
+  it('取用句用简称（财爻）时认作六亲，地支回全文唯一补齐', () => {
+    const text = '一、取用\n财爻为用，月建临之，日辰生扶。\n\n二、盘面\n用神妻财丑土临应。';
+    const hint = parseUseGod(text);
+    expect(hint).toMatchObject({ relation: '妻财', branch: '丑', excerpt: '妻财丑土' });
+  });
+
+  it('取用段只给六亲、地支在全文唯一时补齐', () => {
+    const text = '一、取用\n取官鬼为用神。\n\n二、盘面\n官鬼亥水发动。';
+    const hint = parseUseGod(text);
+    expect(hint).toMatchObject({ relation: '官鬼', branch: '亥' });
+    // 盘面里没有官鬼亥，不硬指爻位
+    expect(resolveUseGodLine(hint, lines)).toBeNull();
+  });
+
+  it('全文里同六亲出现两个地支时不给地支', () => {
+    const text = '一、取用\n以父母为用神。\n\n二、盘面\n父母辛丑土与父母丙戌土并见。';
+    const hint = parseUseGod(text);
+    expect(hint?.relation).toBe('父母');
+    expect(hint?.branch).toBeNull();
+  });
+
   it('正文没有取用时返回 null，不硬猜', () => {
     expect(parseUseGod('')).toBeNull();
     expect(parseUseGod('二、盘面\n月建戌土当令。')).toBeNull();
