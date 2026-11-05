@@ -48,6 +48,21 @@ lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
 tests/                  差分基准与引擎自证
 ```
 
+## 后台（`/admin`）
+
+公告 · LLM 切换 · 流量统计配置 · 审计。数据存 D1（本地用 miniflare），
+密钥只放服务端环境变量（profile 里只填变量名）。
+
+```bash
+npm run dev:vinext   # http://localhost:3001/admin  （本地 D1；开发默认口令 dev-admin）
+npm run dev          # 无绑定，后台是内存模式（界面会标明）
+```
+
+- 口令：`ADMIN_PASSWORD` + 会话密钥 `ADMIN_SESSION_SECRET`；生产缺一即 503。
+- 开发默认口令只对本机 hostname 生效，线上域名不会启用。
+- 结构见 [docs/cloudflare.md](docs/cloudflare.md) 第八节；schema 在 `migrations/*.sql`，
+  `npm run gen:schema` 生成运行时建表常量，`npm run check` 校验一致性 + 可移植性 + 测试。
+
 ## 六爻盘面版式
 
 `components/liuyao/HexagramBoard.tsx` 是 bazi-web `components/zhanbu/MobileHexagramPoster.tsx`

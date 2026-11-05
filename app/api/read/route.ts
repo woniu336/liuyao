@@ -16,6 +16,8 @@
 
 import { buildReadingPrompt } from './prompt';
 import type { ReadingFacts } from '@/lib/readings/types';
+import { getAdminStore } from '@/lib/admin/store';
+import { SETTING_LLM_ACTIVE, type LlmProfile } from '@/lib/admin/types';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_LIMIT = { windowMs: 60_000, max: 8 };
@@ -46,15 +48,60 @@ interface LlmConfig {
   key: string;
   baseUrl: string;
   model: string;
+  profileLabel?: string;
 }
 
-function llmConfig(): LlmConfig | null {
+interface LlmResolution {
+  config: LlmConfig | null;
+  /** admin = 后台选定的 profile；env = 传统环境变量兜底 */
+  source: 'admin' | 'env' | 'none';
+  profileLabel?: string;
+  /** admin 模式下 profile 指向的环境变量没配 */
+  missingKeyEnv?: string;
+}
+
+/**
+ * 解析当前生效的 LLM 配置：
+ *   1) 后台 `llm_active_id` 指向的 profile（密钥从其 keyEnv 读取，永不入库）；
+ *   2) 后台没配 profile 时，退回 LLM_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY。
+ */
+async function resolveLlmConfig(): Promise<LlmResolution> {
+  try {
+    const { store } = await getAdminStore();
+    const activeId = await store.getSetting<string>(SETTING_LLM_ACTIVE);
+    if (activeId) {
+      const profiles = await store.listProfiles();
+      const profile = profiles.find((p: LlmProfile) => p.id === activeId && p.enabled);
+      if (profile) {
+        const key = (typeof process !== 'undefined' ? process.env[profile.keyEnv] : '') || '';
+        if (!key) {
+          return {
+            config: null,
+            source: 'admin',
+            profileLabel: profile.label,
+            missingKeyEnv: profile.keyEnv,
+          };
+        }
+        return {
+          config: { key, baseUrl: profile.baseUrl, model: profile.model, profileLabel: profile.label },
+          source: 'admin',
+          profileLabel: profile.label,
+        };
+      }
+    }
+  } catch {
+    /* 后台存储不可用：继续走环境变量兜底 */
+  }
+
   const key = process.env.LLM_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
-  if (!key) return null;
+  if (!key) return { config: null, source: 'none' };
   return {
-    key,
-    baseUrl: (process.env.LLM_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, ''),
-    model: process.env.LLM_MODEL || 'deepseek-chat',
+    config: {
+      key,
+      baseUrl: (process.env.LLM_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, ''),
+      model: process.env.LLM_MODEL || 'deepseek-chat',
+    },
+    source: 'env',
   };
 }
 
@@ -89,12 +136,17 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'facts 不合法：需要 kind 与其对应的盘面事实' }, { status: 400 });
   }
 
-  const config = llmConfig();
+  const resolution = await resolveLlmConfig();
+  const config = resolution.config;
   if (!config) {
     return Response.json(
       {
-        error: '解卦服务未配置：请在服务端设置 LLM_API_KEY（可选 LLM_BASE_URL / LLM_MODEL）。客户端不会持有密钥。',
+        error:
+          resolution.source === 'admin'
+            ? `后台选定的 LLM「${resolution.profileLabel}」缺少密钥：请在服务端设置环境变量 ${resolution.missingKeyEnv}`
+            : '解卦服务未配置：请在服务端设置 LLM_API_KEY（可选 LLM_BASE_URL / LLM_MODEL），或在后台添加并启用 LLM profile。客户端不会持有密钥。',
         configured: false,
+        source: resolution.source,
       },
       { status: 501 },
     );

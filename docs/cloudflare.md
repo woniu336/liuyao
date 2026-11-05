@@ -90,3 +90,77 @@ npm run check:portability   # 运行时代码是否有 fs/node 内置、next/ima
 5. `vinext init` 在 npm 11 + 用户级 `allow-scripts=workerd` 下会报 `EALLOWSCRIPTS`；本次用 `--userconfig` 绕过。
    正式接入时把 `allowScripts` 收进项目配置，别依赖本机 npmrc。
 6. **未做**：`vinext-cloudflare deploy`（wrangler/cf 未登录）、Cloudflare Access、真实 secret 注入。
+
+## 八、M1：后台地基（已完成）
+
+### 数据（D1）
+
+`migrations/0001_init.sql`（单一事实源）→ `lib/admin/store/schema.generated.ts`（运行时内联建表语句，
+由 `npm run gen:schema` 生成，`npm run check:schema` 校验一致性；`npm run check` 会一起跑）。
+
+| 表 | 用途 |
+|---|---|
+| `settings` | `announcement` / `analytics` / `llm_active_id` 等键值（JSON） |
+| `llm_profiles` | provider 元信息：`base_url` / `model` / **`key_env`**（密钥变量名，永不存密钥） |
+| `cases` | 卦例（留给 M3 迁移前台，当前前台仍用 localStorage） |
+| `admin_audit` | 所有写操作的审计（actor / action / detail） |
+
+### 接口
+
+| 路径 | 鉴权 | 说明 |
+|---|---|---|
+| `GET /api/announcement` | 公开 | 生效中的公告（60s 缓存，失败返回 null） |
+| `GET /api/admin/session` | 公开 | 登录态 / 是否已配置 / 当前存储模式 |
+| `POST /api/admin/login` | 口令 | 限流 5 次/5 分钟；成功写 HttpOnly 签名 Cookie |
+| `POST /api/admin/logout` | 会话 | 清 Cookie + 审计 |
+| `GET /api/admin/state` | 会话 | 后台快照（公告/统计/LLM/审计） |
+| `PUT /api/admin/announcement` | 会话 + 同源 | 校验后写库 + 审计 |
+| `PUT /api/admin/analytics` | 会话 + 同源 | 结构化统计配置（不接任意 JS） |
+| `POST /api/admin/llm` | 会话 + 同源 | `upsert` / `delete` / `activate` / `test` |
+| `GET /api/admin/audit` | 会话 | 审计列表（≤200） |
+
+### 鉴权
+
+- 口令：`ADMIN_PASSWORD`；会话签名：`ADMIN_SESSION_SECRET`（WebCrypto HMAC-SHA256，7 天）。
+- 两者缺一 → 后台 503（fail-closed）。
+- **开发默认口令 `dev-admin` 只在「本机 hostname（localhost/127.0.0.1）+ 非 production」时启用**；
+  线上域名不会走兜底，避免忘配 env 时悄悄开门。
+- 登录限流是进程内内存表（单 isolate 有效）；上线时换 Cloudflare Rate Limiting / D1 计数。
+- 绑定域名后接 Cloudflare Access：边缘保护 `/admin*` 与 `/api/admin/*`，应用内识别
+  `Cf-Access-Jwt-Assertion` 即可，口令分支保留兜底。
+
+### LLM 切换
+
+- 后台维护 profile：`label / baseUrl / model / keyEnv / enabled / sort`，选定 `llm_active_id`。
+- `/api/read` 优先用 active profile，并从 `process.env[keyEnv]` 取密钥；后台「测试连通」会真的打一次上游。
+- 没配 profile 时退回 `LLM_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY` 兜底。
+- 密钥不显示、不落库；加新 provider 只需部署侧加一个 secret。
+
+### 本地怎么跑
+
+```bash
+# 有 D1 的完整回路（推荐验收后台）
+npm run dev:vinext        # http://localhost:3001/admin，开发默认口令 dev-admin
+# 或显式给口令：
+ADMIN_PASSWORD=xxx ADMIN_SESSION_SECRET=yyy npm run dev:vinext
+
+# 日常 UI 回路（无绑定，后台是内存模式，重启清空，界面有明确提示）
+npm run dev               # http://localhost:3000/admin
+```
+
+`vite.config.ts` 已放行本机所有非回环 IPv4（`lanOrigins()`），手机可用局域网 IP 访问 dev。
+
+### 验证记录（2026-11-05）
+
+- 39 项测试通过（新增：鉴权 5、存储/校验 9、schema 3）。
+- workerd + 本地 D1 端到端：登录 → 公告保存 → `/api/announcement` 生效 → 新建 profile →
+  自动/手动设为当前 → `/api/read` 用该 profile 打上游（mock SSE）→ 审计出现 → 退出后 401；
+  跨源 PUT 返回 403。
+- `npm run build:vinext` 与 `npm run build`（Next）均通过；`check:schema` / `check:portability` 通过。
+
+### 仍未做（M2/M3）
+
+- 公告条与统计脚本的前台注入（M3）。
+- 卦例从 localStorage 迁 D1（M3，需要 owner 标识）。
+- Cloudflare Access、真实 secret 注入方式、`vinext-cloudflare deploy`。
+- 登录限流的边缘化（Rate Limiting / KV）。
