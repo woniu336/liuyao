@@ -14,7 +14,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Star } from 'lucide-react';
 import { Lunar } from 'lunar-javascript';
 import NinePalaceBoard from './NinePalaceBoard';
 import HexagramFigure from './HexagramFigure';
@@ -31,7 +31,9 @@ import {
 } from '@/lib/xct/boardBuilder';
 import { judgeFullBoard } from '@/lib/xct/judgeEngine';
 import { traceZhengTuiChain } from '@/lib/xct/dagTracker';
-import { ALL_TRIGRAMS, PALACE_NAMES, XIAN_TIAN_NUMBER } from '@/lib/xct/constants';
+import { ALL_TRIGRAMS, PALACE_NAMES, SIXTY_FOUR_HEXAGRAMS, XIAN_TIAN_NUMBER } from '@/lib/xct/constants';
+import { getCaseStore } from '@/lib/store';
+import { buildXctRecord } from '@/lib/cases/record';
 
 type CastMode = 'four' | 'time' | 'self';
 
@@ -75,7 +77,16 @@ export default function XiaoChengTuView() {
   const [movingYao, setMovingYao] = useState<number | null>(null);
   const [timeDisplay, setTimeDisplay] = useState<ReturnType<typeof getDivinationTimeInfo> | null>(null);
   const [notice, setNotice] = useState('');
+  const [castSnapshot, setCastSnapshot] = useState<{
+    method: CastMode;
+    tianDiNums?: [string, string, string, string];
+    timeDate?: string;
+    manual?: { benUpper: Trigram; benLower: Trigram; zhiUpper: Trigram; zhiLower: Trigram };
+    timeInput: string;
+  } | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
+  const restoredRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -204,26 +215,49 @@ export default function XiaoChengTuView() {
     setChain(traceZhengTuiChain(board, p));
   };
 
-  const runCast = () => {
+  interface CastOverride {
+    method?: CastMode;
+    tianDiNums?: [string, string, string, string];
+    timeDate?: string;
+    manual?: { benUpper: Trigram; benLower: Trigram; zhiUpper: Trigram; zhiLower: Trigram };
+  }
+
+  /** 起盘；从卦例夹复原时用 override 直接给值（setState 是异步的，不能读完再算） */
+  const runCast = (override?: CastOverride) => {
     setNotice('');
     try {
+      const curMethod = override?.method ?? method;
+      const curNums = override?.tianDiNums ?? tianDiNums;
+      const curTime = override?.timeDate ?? selectedTime;
+      const curManual =
+        override?.manual ?? {
+          benUpper: manualBenUpper,
+          benLower: manualBenLower,
+          zhiUpper: manualZhiUpper,
+          zhiLower: manualZhiLower,
+        };
+
+      const castTimeInput = curMethod === 'time' ? curTime || nowLocalInput() : nowLocalInput();
       let nextBoard: BoardState;
       let nextMoving: number | null = null;
-      let effectiveTime: Date | string = new Date();
 
-      if (method === 'four') {
-        if (tianDiNums.some((v) => v === '' || !/^[0-9]$/.test(v))) {
+      if (curMethod === 'four') {
+        if (curNums.some((v) => v === '' || !/^[0-9]$/.test(v))) {
           setNotice('请先报入天地四数（各 0–9），或点击「一键随机报数」');
           return;
         }
-        nextBoard = buildBoardFromTianDiNumbers(tianDiNums.map((v) => Number(v)) as [number, number, number, number]);
-      } else if (method === 'time') {
-        effectiveTime = selectedTime || new Date();
-        const res = buildBoardFromMeihuaTime(effectiveTime);
+        nextBoard = buildBoardFromTianDiNumbers(curNums.map((v) => Number(v)) as [number, number, number, number]);
+      } else if (curMethod === 'time') {
+        const res = buildBoardFromMeihuaTime(castTimeInput);
         nextBoard = res.board;
         nextMoving = res.movingYao;
       } else {
-        nextBoard = buildBoardFromManualTrigrams(manualBenUpper, manualBenLower, manualZhiUpper, manualZhiLower);
+        nextBoard = buildBoardFromManualTrigrams(
+          curManual.benUpper,
+          curManual.benLower,
+          curManual.zhiUpper,
+          curManual.zhiLower,
+        );
       }
 
       const nextJudgments = judgeFullBoard(nextBoard);
@@ -233,8 +267,76 @@ export default function XiaoChengTuView() {
       setMovingYao(nextMoving);
       setActivePalace(startPalace);
       setChain(traceZhengTuiChain(nextBoard, startPalace));
-      setTimeDisplay(getDivinationTimeInfo(effectiveTime));
+      setTimeDisplay(getDivinationTimeInfo(castTimeInput));
+      setCastSnapshot({
+        method: curMethod,
+        ...(curMethod === 'four' ? { tianDiNums: curNums } : {}),
+        ...(curMethod === 'time' ? { timeDate: castTimeInput } : {}),
+        ...(curMethod === 'self' ? { manual: curManual } : {}),
+        timeInput: castTimeInput,
+      });
+      setSavedId(null);
       requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // 从卦例夹打开：?case=<id>
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const id = new URLSearchParams(window.location.search).get('case');
+    if (!id) return;
+    void (async () => {
+      const record = await getCaseStore().get(id);
+      if (!record || record.kind !== 'xct' || record.input.kind !== 'xct') {
+        setNotice('卦例不存在或类型不符');
+        return;
+      }
+      const inp = record.input;
+      if (inp.timeDate) setSelectedTime(inp.timeDate);
+      if (inp.tianDiNums) setTianDiNums(inp.tianDiNums);
+      if (inp.manual) {
+        setManualBenUpper(inp.manual.benUpper as Trigram);
+        setManualBenLower(inp.manual.benLower as Trigram);
+        setManualZhiUpper(inp.manual.zhiUpper as Trigram);
+        setManualZhiLower(inp.manual.zhiLower as Trigram);
+      }
+      setMethod(inp.method);
+      runCast({
+        method: inp.method,
+        tianDiNums: inp.tianDiNums,
+        timeDate: inp.timeDate,
+        manual: inp.manual
+          ? {
+              benUpper: inp.manual.benUpper as Trigram,
+              benLower: inp.manual.benLower as Trigram,
+              zhiUpper: inp.manual.zhiUpper as Trigram,
+              zhiLower: inp.manual.zhiLower as Trigram,
+            }
+          : undefined,
+      });
+    })();
+    // runCast 每次渲染都是新函数，靠 restoredRef 保证只跑一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async () => {
+    if (!board || !castSnapshot) return;
+    try {
+      const record = buildXctRecord({
+        benName: SIXTY_FOUR_HEXAGRAMS[board.ben.upper][board.ben.lower],
+        zhiName: SIXTY_FOUR_HEXAGRAMS[board.zhi.upper][board.zhi.lower],
+        center: board.center,
+        timeInput: castSnapshot.timeInput,
+        method: castSnapshot.method,
+        tianDiNums: castSnapshot.tianDiNums,
+        timeDate: castSnapshot.timeDate,
+        manual: castSnapshot.manual,
+      });
+      await getCaseStore().save(record);
+      setSavedId(record.id);
     } catch (e) {
       setNotice(e instanceof Error ? e.message : String(e));
     }
@@ -247,6 +349,8 @@ export default function XiaoChengTuView() {
     setNotice('');
     setTianDiNums(['', '', '', '']);
     setIsRolling(false);
+    setCastSnapshot(null);
+    setSavedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -271,6 +375,26 @@ export default function XiaoChengTuView() {
             <span className="font-serif text-[13px] font-semibold tracking-[0.18em] text-[#22201B]">小成图 · 排盘</span>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/cases"
+              className="hidden font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline sm:inline"
+            >
+              卦例夹
+            </Link>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={Boolean(savedId)}
+              title={savedId ? '已保存到卦例夹' : '保存起卦输入，随时重排'}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-[2px] border px-2.5 py-1.5 font-serif text-[11.5px] transition-colors ${
+                savedId
+                  ? 'cursor-default border-[#DED6C6] text-[#8c8272]'
+                  : 'border-[#CBBFA8] text-[#5E5A50] hover:border-[#8A8378] hover:text-[#22201B]'
+              }`}
+            >
+              <Star size={12} fill={savedId ? 'currentColor' : 'none'} />
+              <span>{savedId ? '已保存' : '保存卦例'}</span>
+            </button>
             <Link
               href="/"
               className="font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline"
@@ -357,6 +481,12 @@ export default function XiaoChengTuView() {
           <h1 className="font-serif text-[26px] font-bold leading-tight tracking-[0.2em] text-[#1E2520] sm:text-[30px]">
             小成图
           </h1>
+          <Link
+            href="/cases"
+            className="font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline"
+          >
+            卦例夹
+          </Link>
           <Link
             href="/"
             className="font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline"
@@ -556,7 +686,7 @@ export default function XiaoChengTuView() {
           <button
             type="button"
             disabled={isRolling}
-            onClick={runCast}
+            onClick={() => runCast()}
             className="flex h-11 w-full max-w-[220px] select-none cursor-pointer items-center justify-center bg-[#334a5d] px-6 font-serif text-[14px] tracking-[0.2em] text-[#fbf7ec] shadow-sm transition-all hover:bg-[#283a49] active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500"
           >
             {isRolling ? '数字翻滚中…' : '排 盘 →'}

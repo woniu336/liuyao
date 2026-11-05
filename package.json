@@ -8,7 +8,8 @@
     "start": "node scripts/next.mjs start",
     "lint": "next lint",
     "test": "vitest run",
-    "dev:bg": "node scripts/dev-bg.mjs"
+    "dev:bg": "node scripts/dev-bg.mjs",
+    "check:portability": "node scripts/check-portability.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.40.0",

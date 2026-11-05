@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Star } from 'lucide-react';
 import CastWorkbench from './CastWorkbench';
 import ManualCast from './ManualCast';
 import HexagramBoard from './HexagramBoard';
@@ -10,6 +10,8 @@ import type { CoinResult } from './types';
 import { castLiuyao, type LiuyaoChart } from '@/lib/liuyao/najia';
 import { buildLiuyaoInput, castTimeInfo, nowTimeInput, parseTimeInput, type CastTimeInfo } from '@/lib/liuyao/ganzhi';
 import { boardToText, chartToBoardProps, type BoardViewProps } from '@/lib/liuyao/board-view';
+import { getCaseStore } from '@/lib/store';
+import { buildLiuyaoRecord } from '@/lib/cases/record';
 
 type CastMode = 'coin' | 'yarrow' | 'manual';
 
@@ -35,10 +37,18 @@ export default function LiuyaoView() {
   const [autoTime, setAutoTime] = useState(true);
   const [manual, setManual] = useState<(CoinResult | null)[]>(emptyManual);
   const [castKey, setCastKey] = useState(0);
-  const [result, setResult] = useState<{ chart: LiuyaoChart; time: CastTimeInfo } | null>(null);
+  const [result, setResult] = useState<{
+    chart: LiuyaoChart;
+    time: CastTimeInfo;
+    coins: number[];
+    method: CastMode;
+    timeInput: string;
+  } | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const paperRef = useRef<HTMLDivElement | null>(null);
+  const restoredRef = useRef(false);
 
   const timeInfo = useMemo(() => {
     try {
@@ -48,31 +58,50 @@ export default function LiuyaoView() {
     }
   }, [timeInput]);
 
-  const compute = React.useCallback(
-    (values: number[], when?: string) => {
-      try {
-        const info = castTimeInfo(parseTimeInput(when ?? timeInput));
-        const chart = castLiuyao(buildLiuyaoInput(info, values));
-        setResult({ chart, time: info });
-        setError('');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch (e) {
-        setResult(null);
-        setError(e instanceof Error ? e.message : String(e));
-      }
-    },
-    [timeInput],
-  );
+  const applyCast = React.useCallback((values: number[], when: string, castMethod: CastMode) => {
+    try {
+      const info = castTimeInfo(parseTimeInput(when));
+      const chart = castLiuyao(buildLiuyaoInput(info, values));
+      setResult({ chart, time: info, coins: values, method: castMethod, timeInput: when });
+      setSavedId(null);
+      setError('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      setResult(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
 
   const handleComplete = React.useCallback(
     (values: CoinResult[]) => {
       // 自动时间模式下，以提交这一刻起卦（与盘面显示的干支一致）
       const now = autoTime ? nowTimeInput() : timeInput;
       if (autoTime) setTimeInput(now);
-      compute(values, now);
+      applyCast(values, now, method);
     },
-    [autoTime, timeInput, compute],
+    [autoTime, timeInput, method, applyCast],
   );
+
+  // 从卦例夹打开：?case=<id> —— 用记录里的输入重排同一卦
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const id = new URLSearchParams(window.location.search).get('case');
+    if (!id) return;
+    void (async () => {
+      const record = await getCaseStore().get(id);
+      if (!record || record.kind !== 'liuyao' || record.input.kind !== 'liuyao') {
+        setError('卦例不存在或类型不符');
+        return;
+      }
+      setQuestion(record.input.question ?? '');
+      setGender(record.input.gender ?? '男');
+      setMethod(record.input.method);
+      setTimeInput(record.timeInput);
+      setAutoTime(false);
+      applyCast(record.input.coins, record.timeInput, record.input.method);
+    })();
+  }, [applyCast]);
 
   const handleReset = () => {
     setResult(null);
@@ -82,7 +111,27 @@ export default function LiuyaoView() {
     setQuestion('');
     setAutoTime(true);
     setTimeInput(nowTimeInput());
+    setSavedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSave = async () => {
+    if (!result) return;
+    try {
+      const record = buildLiuyaoRecord({
+        chart: result.chart,
+        time: result.time,
+        timeInput: result.timeInput,
+        question,
+        gender,
+        method: result.method,
+        coins: result.coins,
+      });
+      await getCaseStore().save(record);
+      setSavedId(record.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const boardProps: BoardViewProps | null = result
@@ -112,7 +161,27 @@ export default function LiuyaoView() {
             <span className="inline-block h-2 w-2 rounded-full bg-[#9E2A2B]/70" />
             <span className="text-sm font-bold tracking-widest text-[#4A4238]">古筮排盘</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/cases"
+              className="hidden text-[11.5px] text-[#7A6F62] underline-offset-4 hover:text-[#9E2A2B] hover:underline sm:inline"
+            >
+              卦例夹
+            </Link>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={Boolean(savedId)}
+              title={savedId ? '已保存到卦例夹' : '保存起卦输入，随时重排'}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 shadow-xs transition-all active:scale-95 disabled:cursor-default ${
+                savedId
+                  ? 'border-[#DCD6C5] bg-[#F3F0E4] text-[#8C7E6D]'
+                  : 'border-[#DCD6C5] bg-[#F3F0E4] text-[#4A4238] hover:bg-[#EAE5D4]'
+              }`}
+            >
+              <Star size={13} fill={savedId ? 'currentColor' : 'none'} />
+              <span>{savedId ? '已保存' : '保存卦例'}</span>
+            </button>
             <button
               type="button"
               onClick={handleCopy}
@@ -182,12 +251,14 @@ export default function LiuyaoView() {
               六爻排盘
             </h1>
           </div>
-          <Link
-            href="/"
-            className="shrink-0 font-serif text-[11.5px] text-[#5e5a50] underline-offset-4 transition-colors hover:text-[#8e3a2c] hover:underline"
-          >
-            返回首页
-          </Link>
+          <div className="flex shrink-0 items-center gap-3 font-serif text-[11.5px] text-[#5e5a50]">
+            <Link href="/cases" className="underline-offset-4 transition-colors hover:text-[#8e3a2c] hover:underline">
+              卦例夹
+            </Link>
+            <Link href="/" className="underline-offset-4 transition-colors hover:text-[#8e3a2c] hover:underline">
+              返回首页
+            </Link>
+          </div>
         </div>
         <p className="mt-1.5 pl-[18px] font-serif text-[11.5px] tracking-[0.04em] text-[#7c7365]">
           纳甲装卦 · 安世应 · 定六亲 · 旬空 · 伏神 · 天医文昌神煞（纯确定性排盘，不含吉凶断语）

@@ -87,6 +87,17 @@ npm test
 裁剪后没有了"用神在哪一宫"，正推起点改为**读者点选的宫位**（默认中宫立极）。
 这不是算法改动，只是去掉了用神层。
 
+## 服务端边界（为 Cloudflare 预留）
+
+- `lib/store/`：卦例存储接口（异步）+ localStorage 实现；换 D1 只改实现。
+  `/cases` 里可收藏、打开复原（只存起卦输入，盘面由引擎重算）、删除。
+- `lib/readings/`：解卦**事实契约**（客户端只发盘面事实与问句）。
+  `app/api/read/route.ts` 是服务端流式代理：prompt 在服务端拼（`route` 同目录 `prompt.ts`），
+  密钥只在服务端 env/secret，未配置时明确返回 501。暂无前端入口，断卦口径待定。
+- `scripts/check-portability.mjs`：`npm run check:portability` 守住 Workers 兼容性
+  （禁 `fs`/`node:*`、`next/image`、`next/font`、锁死 `output: 'export'`）。
+- 目标与约束、后台规划、部署触发条件见 [docs/cloudflare.md](docs/cloudflare.md)。
+
 ## 刻意不做的事
 
 - 不取用神、不判吉凶、不排应期：这些属于规则层，原项目在五层 DAG 里，本仓库不搬。

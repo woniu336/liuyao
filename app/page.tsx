@@ -72,6 +72,16 @@ export default function HomePage() {
         两个工具都只输出可核查的排盘事实：六爻给纳甲与世界应、旬空神煞；小成图给九宫天盘与四象八断。
         问句只作记录，不参与任何计算。
       </p>
+
+      <div className="mt-5 text-center">
+        <Link
+          href="/cases"
+          className="inline-flex items-center gap-1.5 rounded-[2px] border border-[#D9CDB6] px-3 py-1.5 font-serif text-[11.5px] text-[#5e5a50] transition-colors hover:border-[#c9b99a] hover:text-[#22201b]"
+        >
+          卦例夹
+          <span className="text-[10px] text-[#93897a]">本机保存的卦例</span>
+        </Link>
+      </div>
     </div>
   );
 }
