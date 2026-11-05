@@ -19,6 +19,11 @@ npm run dev:bg       # 后台：日志写 logs/dev.out.log，按端口重启旧�
 npm test             # 引擎自证 + 差分对齐（见下）
 ```
 
+`npm run dev/build` 走 `scripts/next.mjs`：先清掉宿主进程可能泄漏进来的
+`__NEXT_PRIVATE_STANDALONE_CONFIG` 等私有变量再启动 Next。不清的话，
+这些变量会被当成真实配置读入（distDir 被改写、outputFileTracingRoot 指到不存在的路径），
+表现为 dev 起不来或 build 报 `TypeError: generate is not a function`。
+
 手机用局域网 IP 打开时，`next.config.ts` 会把本机所有非回环 IPv4 放进
 `allowedDevOrigins`。否则 Next 16 会拦掉 `/_next/static/chunks/*.js`，
 页面看着完整、按钮全部不动（React 没 hydration）。
@@ -27,14 +32,30 @@ npm test             # 引擎自证 + 差分对齐（见下）
 
 ```
 app/                    首页 / 六爻页 / 小成图页
-components/liuyao/      六爻：LiuyaoView（起卦表单）· CastWorkbench（三钱/大衍）· ManualCast · ChartBoard（盘面）
+components/liuyao/      六爻：LiuyaoView（起卦表单）· CastWorkbench（三钱/大衍）· ManualCast · HexagramBoard（古法卦单）
 components/xct/         小成图：XiaoChengTuView · NinePalaceBoard · HexagramFigure · ZhengTuiPathView · VerdictCard · ReportView
 lib/liuyao/najia.ts     六爻确定性排盘引擎（core.py 的逐条移植）
+lib/liuyao/board-view.ts 引擎结果 → 盘面视图数据 + 复制文本
 lib/liuyao/ganzhi.ts    起卦时刻 → 四柱干支
 lib/xct/                小成图引擎（boardBuilder / judgeEngine / dagTracker / constants / guizang）
 lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
 tests/                  差分基准与引擎自证
 ```
+
+## 六爻盘面版式
+
+`components/liuyao/HexagramBoard.tsx` 是 bazi-web `components/zhanbu/MobileHexagramPoster.tsx`
+embedded 分支的逐行搬运，只换数据来源：
+
+- 占问 + 男占/女占落款、时空看板（公历 / 月建+日辰 / 旬空 / 十三神煞）
+- 双卦对瞻表头（本卦 · 变卦，附归魂/游魂/六冲/六合）
+- 定宽栅格：六神 32 / 本卦纳甲 68 / 爻画 46 / 世应 18 / 动爻 22 / 变卦纳甲 68 / 变爻画 46 / 动变标签 52
+- 伏神就地引出 `↑伏神: 妻财子水`
+
+版式未靠目测：同一份盘面数据分别交给原组件与本仓库组件渲染 4 类卦例
+（初爻动附伏神 / 静卦 / 六爻全动 / 混杂多动），逐元素比对 DOM 结构、文本、相对几何与
+字号/字重/颜色，结果完全一致。问句与性别只作落款，不参与计算。
+
 
 ## 六爻引擎的验证方式
 

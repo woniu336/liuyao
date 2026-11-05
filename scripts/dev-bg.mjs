@@ -79,6 +79,12 @@ async function main() {
     await sleep(250);
   }
 
+  // 清掉宿主泄漏的 Next 私有变量（详见 scripts/next.mjs 顶部说明）
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('__NEXT_PRIVATE_')) delete env[key];
+  }
+
   const nextBin = path.join(projectRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
   const logFd = fs.openSync(LOG_FILE, 'w');
   const child = spawn(process.execPath, [nextBin, 'dev', '--port', String(PORT)], {
@@ -86,7 +92,7 @@ async function main() {
     detached: true,
     stdio: ['ignore', logFd, logFd],
     windowsHide: true,
-    env: process.env,
+    env,
   });
   child.unref();
   fs.closeSync(logFd);

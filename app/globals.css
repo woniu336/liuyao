@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "lxgw-wenkai-webfont/lxgwwenkai-regular.css";
-@import "@fontsource/ma-shan-zheng";
 
 /* ==========================================================================
    宣纸米白 / 暖墨字 / 朱砂强调 —— 与 bazi-web 同一套版式语汇的裁剪版。
@@ -8,9 +6,6 @@
    ========================================================================== */
 
 @theme inline {
-  --font-serif-cn: "LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "Songti SC", serif;
-  --font-title-art: "Ma Shan Zheng", "LXGW WenKai", "Kaiti SC", "KaiTi", serif;
-
   --color-paper: #f7f3ea;
   --color-paper-card: #fffdf8;
   --color-ink: #22201b;
@@ -39,7 +34,6 @@
   --yi-accent: var(--accent);
   --yi-accent-soft: var(--accent-soft);
 
-  --serif: "LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "Songti SC", serif;
 }
 
 html,
@@ -52,11 +46,6 @@ body {
   font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-}
-
-.font-serif,
-.font-serif-cn {
-  font-family: var(--serif);
 }
 
 input::placeholder,
