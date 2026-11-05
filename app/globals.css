@@ -8,82 +8,79 @@
    ========================================================================== */
 
 @theme {
-  /* 底与面 */
-  --color-paper-0: #FBFBF7;
-  --color-paper-1: #EEF2F3;
-  --color-paper-2: #E4EBED;
-  --color-paper-3: #D8E2E5;
-  --color-line: #D3DBDE;
-  --color-line-strong: #C2D0D6;
+  /* ── 底与面：雾蓝做"水"，纸做"面"，两者分工，不再糊成一片灰 ── */
+  --color-water-1: #E2EAED; /* 页底：雾蓝，略压深以拉开与纸卡的层次 */
+  --color-water-2: #DCE6E9;
+  --color-water-3: #CBD9DE;
+  --color-paper-0: #FFFEF9; /* 纸面：纯暖白，与雾蓝底拉开明度差 */
+  --color-paper-1: #F6F3EA;
+  --color-paper-2: #EDE8DB;
+  --color-line: #DCD5C5; /* 纸上的发丝线偏暖 */
+  --color-line-strong: #C0B8A4;
 
-  /* 墨（文字） */
-  --color-ink-900: #1F2A30;
-  --color-ink-800: #2C3A42;
-  --color-ink-700: #3B4C55;
-  --color-ink-600: #5F7278;
-  --color-ink-500: #7C9099;
-  --color-ink-400: #9BABA F;
+  /* ── 墨 ── */
+  --color-ink-900: #141C22;
+  --color-ink-800: #1F2A31;
+  --color-ink-700: #33424A;
+  --color-ink-600: #4A5D66;
+  --color-ink-500: #667A83;
+  --color-ink-400: #97A9B0;
 
-  /* 雾蓝（主色） */
-  --color-mist-300: #B7CCD4;
-  --color-mist-400: #9FB4BD;
-  --color-mist-500: #84A0AC;
-  --color-mist-600: #6E8F9C;
-  --color-mist-700: #5B7C89;
-  --color-mist-900: #3C5661;
+  /* ── 主色：青黛（比雾蓝更沉、更清），用作强调线与选中态 ── */
+  --color-mist-300: #A9C3CB;
+  --color-mist-400: #8AACB6;
+  --color-mist-500: #6C94A0;
+  --color-mist-600: #4F7C8A;
+  --color-mist-700: #3D6673;
+  --color-mist-900: #244450;
 
-  /* 赭金（强调） */
-  --color-gold-200: #E8DAC2;
-  --color-gold-300: #C9A96F;
-  --color-gold-500: #A2833F;
-  --color-gold-600: #8A6A3A;
+  /* ── 赭石：唯一的热色，用于用神/印章/主按钮边 ── */
+  --color-gold-200: #EFE2C9;
+  --color-gold-300: #D9BC8A;
+  --color-gold-500: #A9713F;
+  --color-gold-600: #8E582B;
 
-  /* 朱砂（动爻 / 警示） */
-  --color-cinnabar-300: #D89484;
-  --color-cinnabar-500: #B4534A;
-  --color-cinnabar-600: #A8453C;
+  /* ── 朱砂：动爻 ── */
+  --color-cinnabar-300: #D08C7C;
+  --color-cinnabar-500: #A8402F;
+  --color-cinnabar-600: #8F3323;
 
-  /* 黛绿（吉 / 通过） */
-  --color-jade-500: #4F7A62;
+  --color-jade-500: #3F6B55;
 
-  /* 字体 */
   --font-sans-cn: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans GB", system-ui, sans-serif;
   --font-song: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
   --font-kai: "Kaiti SC", "KaiTi", "STKaiti", "Songti SC", serif;
 
-  /* 圆角 */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
 
-  /* 动效 */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
-  /* 语义别名（写组件时用这些） */
-  --bg: #EEF2F3;
-  --bg-sunken: #E4EBED;
-  --surface: #FBFBF7;
+  /* 语义别名 */
+  --bg: #E2EAED;
+  --bg-sunken: #DCE6E9;
+  --surface: #FFFEF9;
   --surface-raised: #FFFFFF;
-  --ink: #1F2A30;
-  --ink-soft: #5F7278;
-  --ink-faint: #7C9099;
-  --hairline: #D3DBDE;
-  --primary: #6E8F9C;
-  --primary-deep: #3C5661;
-  --accent: #8A6A3A;
-  --accent-tint: #F1E9DA;
-  --danger: #A8453C;
-  --ok: #4F7A62;
+  --ink: #141C22;
+  --ink-soft: #53666F;
+  --ink-faint: #74878F;
+  --hairline: #D8D2C2;
+  --primary: #4F7C8A;
+  --primary-deep: #244450;
+  --accent: #8E582B;
+  --accent-tint: #F3E9D8;
+  --danger: #8F3323;
+  --ok: #3F6B55;
 
-  /* 爻色：阳墨、阴蓝灰、动朱砂 */
-  --yao-yang: #1F2A30;
-  --yao-yin: #84A0AC;
-  --yao-moving: #A8453C;
+  --yao-yang: #141C22;
+  --yao-yin: #6C94A0;
+  --yao-moving: #8F3323;
 
-  /* 兼容旧令牌（既有页面还在用，S1–S3 逐步替换） */
+  /* 兼容旧令牌 */
   --yi-bg: var(--bg);
   --yi-surface: var(--surface);
   --yi-ink: var(--ink);
@@ -92,6 +89,15 @@
   --yi-line: var(--hairline);
   --yi-accent: var(--danger);
   --yi-accent-soft: #F3E4E1;
+}
+
+/* 宣纸米皮肤（备选）：把"水"也换成纸 */
+[data-skin='paper'] {
+  --color-water-1: #EFEADC;
+  --color-water-2: #E4DDCB;
+  --color-water-3: #D6CDB8;
+  --bg: #EFEADC;
+  --bg-sunken: #E4DDCB;
 }
 
 html,

@@ -247,7 +247,7 @@ export function AppBar({
   right?: React.ReactNode;
 }) {
   return (
-    <header className="safe-top sticky top-0 z-20 bg-paper-1/88 backdrop-blur-md">
+    <header className="safe-top sticky top-0 z-20 bg-water-1/85 backdrop-blur-md">
       <div className="mx-auto flex h-[52px] w-full max-w-[520px] items-center justify-between gap-3 px-5">
         <div className="min-w-0">
           <div className="truncate font-song text-[16.5px] font-semibold tracking-[0.1em] text-ink-900">{title}</div>
@@ -261,7 +261,7 @@ export function AppBar({
 
 export function BottomBar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-paper-1/92 backdrop-blur-md">
+    <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-water-1/92 backdrop-blur-md">
       <div className="mx-auto w-full max-w-[520px] px-5 pt-2.5" style={{ borderTop: '1px solid var(--hairline)' }}>
         {children}
       </div>

@@ -191,7 +191,6 @@ export default function LiuyaoView() {
         facts={readingFacts}
         question={question}
         onReset={handleReset}
-        onCopy={handleCopy}
         onSave={handleSave}
         saved={Boolean(savedId)}
         onSwitchXct={switchToXct}

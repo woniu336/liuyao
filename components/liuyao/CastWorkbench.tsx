@@ -6,7 +6,7 @@ import type { CoinResult } from './types';
 import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
 import { masksOf, movingPositions, lineTitle } from '@/lib/hexagram/hex-math';
 import { lookupByMask, resolveHexagramInfo } from '@/lib/hexagram/lookup';
-import { tossLine, tossLines } from '@/lib/liuyao/random';
+import { tossLines, tossThree } from '@/lib/liuyao/random';
 import { Coin } from './Coin';
 import {
   advance,
@@ -158,11 +158,12 @@ export default function CastWorkbench({
   const handleToss = () => {
     if (isTossing || isComplete || disabled) return;
 
-    // 三枚铜钱：密码学级随机（Web Crypto），字 2 / 背 3 各半，无模偏差
-    const sum = tossLine() as CoinResult;
+    // 三枚铜钱：显示真实 Web Crypto 抽到的三枚面，不从和值拼示意组合。
+    const faces = tossThree();
+    const sum = faces.reduce<number>((total, face) => total + face, 0) as CoinResult;
 
     // 立即写入硬币与成爻数据，确保点击第 1 爻即刻跳出爻线与反馈
-    setCurrentCoins(coinFacesOf(sum));
+    setCurrentCoins(faces);
     setValues((prev) => [...prev, sum]);
     setIsTossing(true);
 
@@ -176,8 +177,14 @@ export default function CastWorkbench({
   const handleQuickCast = () => {
     if (isComplete || disabled) return;
     const remaining = 6 - values.length;
-    const newVals: CoinResult[] = [...values, ...(tossLines(remaining) as CoinResult[])];
-    setCurrentCoins(coinFacesOf(newVals[newVals.length - 1]));
+    const newVals: CoinResult[] = [...values];
+    let lastCoins: [CoinFace, CoinFace, CoinFace] = currentCoins;
+    for (let i = 0; i < remaining; i += 1) {
+      const faces = tossThree();
+      lastCoins = faces;
+      newVals.push(faces.reduce<number>((total, face) => total + face, 0) as CoinResult);
+    }
+    setCurrentCoins(lastCoins);
     setValues(newVals);
     setIsTossing(true);
     if (tossTimeoutRef.current) window.clearTimeout(tossTimeoutRef.current);

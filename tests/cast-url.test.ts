@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coinSidesOf, decodeCastState, encodeCastState } from '../lib/liuyao/cast-url';
-import { binaryOf, movingBetween } from '../components/cast/GuaPicker';
+import { binaryOf, movingBetween } from '../lib/liuyao/hexagram-index';
 import { structureFromCoins } from '../lib/xct/yi-bian';
 
 describe('起卦参数的 URL 编解码', () => {

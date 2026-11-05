@@ -1,49 +1,82 @@
 'use client';
 
 /**
- * 首页 · 起卦页
- * ==============
- * 版式对齐原项目 /qigua：**问事输入 + 性别 + 时间 全部明面可见**，
- * 下面是原版三钱起卦台（CastWorkbench：大铜钱、进度、逐爻判决、一键起卦、卦象预览）。
+ * 首页 · 起卦（按用户给的书卷风设计参考重做）
+ * =================================================
+ * 视觉：浅宣纸 + 墨色 + 赭金 + 一点黛绿/朱砂；淡墨山水只作背景，不压交互。
+ * 结构：顶部四入口 → 山水题签 → 一张完整纸笺（求测信息 / 三钱 / 进度 / 爻象 / 主按钮）。
+ * 移动端自然单列；PC 用宽纸笺与完整留白呈现，不是把手机布局硬拉宽。
  *
- * 我们只加两件事：
- *   1. 卦成后弹窗选「六爻 / 小成图」，同一卦两看；
- *   2. 「手动指定」入口（本卦/变卦，动爻自动推）。
- *
- * 随机源：CastWorkbench → lib/liuyao/random.ts（Web Crypto），无 Math.random。
+ * 起卦使用真实三枚 Web Crypto 币面。点数 8 显示「背背字」；每次掷钱的显示面就是实际随机面。
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import CastWorkbench from '@/components/liuyao/CastWorkbench';
-import GuaPicker, { movingBetween } from './GuaPicker';
+import { BookOpen, Clock3 } from 'lucide-react';
+import { Coin, type CoinSide } from '@/components/liuyao/Coin';
+import GuaCombobox from './GuaCombobox';
 import { Button } from '@/components/ui';
+import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
+import { tossStats, tossThree, tossLines } from '@/lib/liuyao/random';
 import { encodeCastState } from '@/lib/liuyao/cast-url';
 import { castTimeInfo, nowTimeInput, parseTimeInput } from '@/lib/liuyao/ganzhi';
+import { masksOf, movingPositions } from '@/lib/hexagram/hex-math';
 import type { CoinResult } from '@/components/liuyao/types';
 import { SIXTY_FOUR_HEXAGRAMS } from '@/lib/liuyao/najia';
+import InkLandscape from '@/components/site/InkLandscape';
 
 const POS_NAMES = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
 
+function lineDescription(sum: CoinResult): string {
+  switch (sum) {
+    case 6:
+      return '老阴 · 交（动）';
+    case 7:
+      return '少阳 · 单';
+    case 8:
+      return '少阴 · 拆';
+    case 9:
+      return '老阳 · 重（动）';
+  }
+}
+
+function facesForValue(sum: CoinResult): CoinSide[] {
+  switch (sum) {
+    case 6: return ['字', '字', '字'];
+    case 7: return ['背', '字', '字'];
+    case 8: return ['背', '背', '字'];
+    case 9: return ['背', '背', '背'];
+  }
+}
+
 export default function CastPage() {
   const router = useRouter();
-
   const [question, setQuestion] = useState('');
   const [gender, setGender] = useState<'男' | '女'>('男');
   const [marital, setMarital] = useState<'unmarried' | 'married'>('unmarried');
   const [timeInput, setTimeInput] = useState('');
   const [autoTime, setAutoTime] = useState(true);
 
-  const [values, setValues] = useState<CoinResult[] | null>(null);
-  const [sheet, setSheet] = useState<'none' | 'manual'>('none');
-  const [castKey, setCastKey] = useState(0);
+  const [values, setValues] = useState<CoinResult[]>([]);
+  const [coins, setCoins] = useState<CoinSide[]>(['字', '背', '字']);
+  const [rolling, setRolling] = useState(false);
+  const [tossKey, setTossKey] = useState(0);
+  const [lastSum, setLastSum] = useState<CoinResult | null>(null);
+  const settleTimerRef = useRef<number | null>(null);
+  const settledRef = useRef(false);
 
+  const [sheet, setSheet] = useState<'none' | 'manual' | 'choose'>('none');
   const [benBinary, setBenBinary] = useState('111111');
   const [zhiBinary, setZhiBinary] = useState('111111');
+  const [stats, setStats] = useState<ReturnType<typeof tossStats> | null>(null);
 
   useEffect(() => {
     setTimeInput(nowTimeInput());
+    setStats(tossStats(2000));
+    return () => {
+      if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    };
   }, []);
 
   const timeInfo = useMemo(() => {
@@ -55,40 +88,95 @@ export default function CastPage() {
     }
   }, [timeInput, autoTime]);
 
-  const moving = useMemo(
-    () => (values ? values.flatMap((v, i) => (v === 6 || v === 9 ? [i + 1] : [])) : []),
-    [values],
-  );
-  const baseName = values
+  const castCount = values.length;
+  const complete = castCount === 6;
+  const last = castCount ? values[castCount - 1] : null;
+  const { primary, moving: movingMask } = masksOf(values);
+  const movingList = movingPositions(values);
+  const baseName = complete
     ? SIXTY_FOUR_HEXAGRAMS[values.map((v) => (v === 7 || v === 9 ? '1' : '0')).join('')]?.name
     : null;
 
-  const handleComplete = useCallback(
-    (next: CoinResult[]) => {
-      if (autoTime) setTimeInput(nowTimeInput());
+  const finishToss = useCallback(
+    (sum: CoinResult) => {
+      if (settledRef.current) return;
+      settledRef.current = true;
+      if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+      setRolling(false);
+      const next = [...values, sum];
       setValues(next);
+      setLastSum(sum);
+      if (autoTime) setTimeInput(nowTimeInput());
+      if (next.length === 6) setSheet('choose');
     },
-    [autoTime],
+    [values, autoTime],
   );
 
-  const manualMoving = movingBetween(benBinary, zhiBinary);
+  const doToss = useCallback(() => {
+    if (rolling || complete) return;
+    // 直接显示 Web Crypto 实际抽到的三枚币面，不从和值拼代表组合。
+    const faces = tossThree();
+    const sum = faces.reduce<number>((total, face) => total + face, 0) as CoinResult;
+    settledRef.current = false;
+    setCoins(faces.map((face) => (face === 2 ? '字' : '背')));
+    setLastSum(sum);
+    setTossKey((k) => k + 1);
+    setRolling(true);
+    // 以最后一枚 animationend 为主路径；reduced-motion/WebView 丢事件时用计时兜底。
+    settleTimerRef.current = window.setTimeout(() => finishToss(sum), 1250);
+  }, [rolling, complete, finishToss]);
+
+  const quickCast = useCallback(() => {
+    if (rolling || complete) return;
+    const next = [...values];
+    let finalFaces: number[] = [2, 2, 2];
+    for (let i = values.length; i < 6; i += 1) {
+      finalFaces = tossThree();
+      next.push(finalFaces.reduce((total, face) => total + face, 0) as CoinResult);
+    }
+    setCoins(finalFaces.map((face) => (face === 2 ? '字' : '背')));
+    setValues(next);
+    setLastSum(next[5]);
+    if (autoTime) setTimeInput(nowTimeInput());
+    setSheet('choose');
+  }, [rolling, complete, values, autoTime]);
+
+  const reset = () => {
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    settledRef.current = true;
+    setRolling(false);
+    setValues([]);
+    setCoins(['字', '背', '字']);
+    setLastSum(null);
+    setTossKey((k) => k + 1);
+    setSheet('none');
+    setAutoTime(true);
+    setTimeInput(nowTimeInput());
+  };
+
+  const manualMoving = useMemo(() => {
+    const out: number[] = [];
+    for (let i = 0; i < 6; i += 1) if (benBinary[i] !== zhiBinary[i]) out.push(i + 1);
+    return out;
+  }, [benBinary, zhiBinary]);
   const manualStatic = manualMoving.length === 0;
 
-  const manualComplete = () => {
+  const manualCommit = () => {
     const bits = benBinary.split('');
-    const next: CoinResult[] = bits.map((b, i) => {
+    const next = bits.map((b, i) => {
       const isMoving = manualMoving.includes(i + 1);
       const yang = b === '1';
       if (!isMoving) return (yang ? 7 : 8) as CoinResult;
       return (yang ? 9 : 6) as CoinResult;
     });
-    if (autoTime) setTimeInput(nowTimeInput());
+    setCoins(facesForValue(next[5]));
     setValues(next);
-    setSheet('none');
+    setLastSum(next[5]);
+    setSheet('choose');
+    if (autoTime) setTimeInput(nowTimeInput());
   };
 
   const go = (target: 'liuyao' | 'xct') => {
-    if (!values) return;
     const qs = encodeCastState({
       coins: values,
       timeInput: autoTime ? nowTimeInput() : timeInput,
@@ -99,243 +187,290 @@ export default function CastPage() {
     router.push(`/${target}?${qs}`);
   };
 
-  const reset = () => {
-    setValues(null);
-    setCastKey((k) => k + 1);
-    setAutoTime(true);
-    setTimeInput(nowTimeInput());
-  };
+  const titleName = complete
+    ? SIXTY_FOUR_HEXAGRAMS[values.map((v) => (v === 7 || v === 9 ? '1' : '0')).join('')]?.name
+    : null;
 
   return (
-    <div className="min-h-screen bg-paper-1 pb-16">
-      {/* 顶部 */}
-      <header className="safe-top">
-        <div className="mx-auto flex h-[54px] w-full max-w-[860px] items-center justify-between px-4 sm:px-6">
-          <div className="flex items-baseline gap-2">
-            <span className="font-song text-[18px] font-semibold tracking-[0.16em] text-ink-900">六爻</span>
-            <span className="text-[10.5px] tracking-[0.08em] text-ink-500">三钱摇卦 · 一事一占</span>
-          </div>
-          <div className="flex items-center gap-4 text-[12px] text-ink-500">
-            <Link href="/cases" className="press underline-offset-4 hover:text-ink-900">
-              卦例夹
+    <div className="min-h-screen bg-[#F4F1E8] text-[#38423C]">
+      {/* 顶部导航：参照设计图，保留未来典籍入口 */}
+      <header className="relative z-20 border-b border-[#C8BEA8]/60 bg-[#F6F2E9]/92 backdrop-blur-sm">
+        <div className="mx-auto flex h-[50px] w-full max-w-[1200px] items-center justify-between px-4 sm:px-7 lg:px-10">
+          <Link href="/" className="flex items-center gap-3 text-[#35443D] no-underline">
+            <span className="flex h-9 w-9 items-center justify-center border border-[#9A7040] font-song text-[20px] text-[#8E6337]" style={{ borderRadius: 3 }}>
+              易
+            </span>
+            <span className="font-song text-[20px] font-semibold tracking-[0.12em]">六爻</span>
+          </Link>
+          <nav className="flex items-center gap-3 text-[12.5px] text-[#625E52] sm:gap-5 sm:text-[14px]" aria-label="主导航">
+            <Link href="/" aria-current="page" className="border-b-2 border-[#49675B] pb-1 font-medium text-[#34483E]">
+              起卦
             </Link>
-            <Link href="/design" className="press hidden underline-offset-4 hover:text-ink-900 sm:inline">
-              设计
-            </Link>
-          </div>
+            <Link href="/cases" className="hover:text-[#8E6337]">卦例</Link>
+            <Link href="/classics" className="hover:text-[#8E6337]">易学典籍</Link>
+            <Link href="/about" className="hidden hover:text-[#8E6337] sm:inline">关于</Link>
+          </nav>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[860px] px-4 pt-2 sm:px-6">
-        {/* 标题 */}
-        <div className="pb-4 pt-2 text-center">
-          <h1 className="font-song text-[26px] font-bold leading-tight tracking-[0.22em] text-ink-900 sm:text-[30px]">
+      {/* 山水题签 */}
+      <section className="relative isolate overflow-hidden">
+        <InkLandscape />
+        <div className="relative z-10 mx-auto flex min-h-[168px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-5 pt-2 text-center sm:min-h-[188px] lg:min-h-[214px] lg:pb-6">
+          <h1 className="font-song text-[34px] font-semibold leading-none tracking-[0.26em] text-[#304239] sm:text-[40px] lg:text-[44px]">
             起 卦
           </h1>
-          <div className="mt-2 flex items-center justify-center gap-2.5 text-[10.5px] tracking-[0.16em] text-ink-500">
-            <span className="h-px w-8 bg-line-strong sm:w-12" />
-            <span>心念纯一 · 六掷成卦 · 卦成可两看</span>
-            <span className="h-px w-8 bg-line-strong sm:w-12" />
-          </div>
+          <p className="mt-2.5 font-kai text-[12px] tracking-[0.14em] text-[#9A805A] sm:text-[13px]">
+            取象于天地，观变于阴阳
+          </p>
         </div>
+      </section>
 
-        {/* 求测信息（明面可见，不折叠） */}
-        <div className="rounded-md border border-line bg-paper-0 p-4 shadow-[0_1px_2px_rgba(31,42,48,0.05)] sm:p-5">
-          <label htmlFor="q" className="block text-[12px] font-semibold text-ink-800">
-            求测事项
-          </label>
-          <input
-            id="q"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            maxLength={120}
-            placeholder="所问何事（如：这个项目月底前能否落地）"
-            className="mt-1.5 h-11 w-full rounded-xs border border-line-strong bg-paper-1 px-3 font-song text-[15px] text-ink-900 outline-none transition-colors focus:border-mist-600 focus:bg-paper-0"
-          />
+      {/* 主纸笺：PC 扩展为宽幅宣纸，内容仍沿中轴排列 */}
+      <main className="relative z-10 mx-auto -mt-3 w-full max-w-[1040px] px-3 pb-16 sm:px-5 lg:px-8">
+        <div
+          className="relative overflow-hidden bg-[#FCF9F0] px-4 py-5 sm:px-7 sm:py-7 lg:px-12 lg:py-9"
+          style={{ border: '1px solid rgba(179,160,125,0.52)', borderRadius: 14, boxShadow: '0 8px 30px rgba(64,69,60,0.10)' }}
+        >
+          {/* 纸面云纹水印 */}
+          <span className="pointer-events-none absolute right-5 top-10 select-none font-song text-[56px] text-[#D9CDAF]/25 sm:right-10 sm:text-[74px]" aria-hidden>
+            ☁
+          </span>
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
-            {/* 性别 */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11.5px] text-ink-500">性别</span>
-              <div className="flex overflow-hidden rounded-xs border border-line-strong">
-                {(['男', '女'] as const).map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    className={`press h-8 w-11 text-[13px] transition-colors ${
-                      gender === g ? 'bg-mist-700 font-medium text-paper-0' : 'bg-paper-0 text-ink-600'
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
+          {/* 求测信息 */}
+          <section className="relative z-10">
+            <label htmlFor="q" className="flex items-center gap-3 font-song text-[17px] font-semibold tracking-[0.08em] text-[#3C4038]">
+              <span className="h-6 w-[4px] bg-[#B08A4D]" />
+              所问何事
+            </label>
+            <input
+              id="q"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              maxLength={120}
+              placeholder="如：这个项目月底前能否落地"
+              className="mt-1.5 h-12 w-full border-0 border-b border-[#D7CDB8] bg-transparent px-7 font-song text-[16px] text-[#36423A] outline-none placeholder:text-[#A6A092] focus:border-[#8E6337]"
+            />
+
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[#D7CDB8]/80 px-2 pb-4 sm:gap-x-7">
+              <div className="flex items-center gap-3">
+                <span className="font-song text-[13px] text-[#665F52]">性别</span>
+                <div className="flex items-center overflow-hidden rounded-full border border-[#D0C6B2]">
+                  {(['男', '女'] as const).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setGender(g)}
+                      className={`press min-h-[36px] min-w-[54px] px-3 font-song text-[13px] transition-colors ${
+                        gender === g ? 'bg-[#DDE4D8] text-[#334B40]' : 'bg-transparent text-[#8A8476]'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <span className="hidden h-7 w-px bg-[#D7CDB8] sm:block" />
+
+              <div className="flex items-center gap-3">
+                <span className="font-song text-[13px] text-[#665F52]">婚否</span>
+                <div className="flex items-center overflow-hidden rounded-full border border-[#D0C6B2]">
+                  {(['unmarried', 'married'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMarital(m)}
+                      className={`press min-h-[36px] min-w-[64px] px-3 font-song text-[12.5px] transition-colors ${
+                        marital === m ? 'bg-[#DDE4D8] text-[#334B40]' : 'bg-transparent text-[#8A8476]'
+                      }`}
+                    >
+                      {m === 'unmarried' ? '未婚' : '已婚'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* 婚否（只影响小成图用宫） */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11.5px] text-ink-500">婚否</span>
-              <div className="flex overflow-hidden rounded-xs border border-line-strong">
-                {(['未婚', '已婚'] as const).map((label, i) => {
-                  const v = i === 0 ? 'unmarried' : 'married';
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2 py-4">
+              <Clock3 size={16} strokeWidth={1.6} className="text-[#98784A]" />
+              <span className="font-song text-[13px] text-[#665F52]">起卦</span>
+              <input
+                type="datetime-local"
+                value={timeInput}
+                onChange={(e) => {
+                  setAutoTime(false);
+                  setTimeInput(e.target.value);
+                }}
+                className="h-9 max-w-[195px] border-0 bg-transparent p-0 font-mono text-[13px] tabular-nums text-[#534F45] outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setAutoTime(true);
+                  setTimeInput(nowTimeInput());
+                }}
+                className={`press font-song text-[11.5px] underline-offset-4 hover:underline ${autoTime ? 'text-[#557364]' : 'text-[#867D6B]'}`}
+              >
+                {autoTime ? '跟随此刻' : '归位当前'}
+              </button>
+              {timeInfo && (
+                <span className="w-full pl-[29px] font-song text-[12px] tracking-[0.08em] text-[#786F5F] sm:w-auto sm:pl-0">
+                  {timeInfo.ganzhiText}
+                </span>
+              )}
+            </div>
+          </section>
+
+          {/* 三钱 */}
+          <section className="relative z-10 border-t border-[#D7CDB8]/80 pt-4 sm:pt-5">
+            <div className="flex items-center justify-center gap-3 font-song text-[15px] tracking-[0.26em] text-[#4B5148]">
+              <span className="h-px w-7 bg-[#B89C6C]/70" />
+              三钱摇卦
+              <span className="h-px w-7 bg-[#B89C6C]/70" />
+            </div>
+
+            <div
+              className={`relative mx-auto mt-1 flex min-h-[112px] max-w-[490px] items-center justify-center gap-5 py-2 sm:min-h-[130px] sm:gap-7 ${!complete && !rolling ? 'cursor-pointer' : ''}`}
+              onClick={!complete && !rolling ? doToss : undefined}
+              role={!complete && !rolling ? 'button' : undefined}
+              aria-label={!complete && !rolling ? '掷钱' : undefined}
+            >
+              <svg className="pointer-events-none absolute inset-x-0 top-1/2 h-[118px] w-full -translate-y-1/2 sm:h-[136px]" viewBox="0 0 620 160" fill="none" aria-hidden="true">
+                <path d="M34 80 C78 22 181 12 307 26 C444 12 543 34 586 79 C552 125 451 146 311 132 C174 145 75 128 34 80Z" stroke="#B7A681" strokeOpacity=".26" strokeWidth="3" strokeDasharray="3 3" />
+                <path d="M49 82 C96 35 197 28 308 38 C425 27 522 43 570 79 C527 111 429 128 309 120 C192 132 96 115 49 82Z" stroke="#B7A681" strokeOpacity=".18" strokeWidth="1.5" />
+              </svg>
+              {coins.map((face, i) => (
+                <Coin
+                  key={`${tossKey}-${castCount}-${i}`}
+                  side={face}
+                  rolling={rolling}
+                  delayMs={i * 40}
+                  rotateDeg={[-7, 4, -3][i] ?? 0}
+                  onSettled={i === 2 && rolling && lastSum !== null ? () => finishToss(lastSum) : undefined}
+                />
+              ))}
+            </div>
+
+            <div className="mx-auto flex max-w-[520px] items-center justify-between px-3">
+              <div className="flex items-center gap-[9px]">
+                {Array.from({ length: 6 }, (_, i) => {
+                  const v = values[i];
+                  const yang = v === 7 || v === 9;
+                  const isMoving = v === 6 || v === 9;
+                  const filled = v !== undefined;
                   return (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setMarital(v as 'married' | 'unmarried')}
-                      className={`press h-8 w-12 text-[12.5px] transition-colors ${
-                        marital === v ? 'bg-mist-700 font-medium text-paper-0' : 'bg-paper-0 text-ink-600'
-                      }`}
-                    >
-                      {label}
-                    </button>
+                    <span key={i} className="relative flex h-[11px] w-[11px] items-center justify-center rounded-full border" style={{ borderColor: isMoving ? '#A8453C' : filled ? '#3E4640' : '#B8AD96' }} aria-label={`第${i + 1}爻${filled ? (yang ? ' 阳' : ' 阴') : ' 未起'}`}>
+                      {filled && <span className="h-[5px] w-[5px] rounded-full" style={{ background: isMoving ? '#A8453C' : yang ? '#344039' : '#899A9D' }} />}
+                    </span>
                   );
                 })}
               </div>
-              <span className="hidden text-[10.5px] text-ink-400 sm:inline">（小成图取用宫用）</span>
-            </div>
-          </div>
-
-          {/* 时间 */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3">
-            <span className="text-[11.5px] text-ink-500">起卦时间</span>
-            <input
-              type="datetime-local"
-              value={timeInput}
-              onChange={(e) => {
-                setAutoTime(false);
-                setTimeInput(e.target.value);
-              }}
-              className="h-8 rounded-xs border border-line-strong bg-paper-0 px-2 text-[12.5px] tabular-nums text-ink-800 outline-none focus:border-mist-600"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setAutoTime(true);
-                setTimeInput(nowTimeInput());
-              }}
-              className={`press text-[11.5px] underline-offset-4 hover:underline ${
-                autoTime ? 'text-mist-700' : 'text-ink-500'
-              }`}
-            >
-              {autoTime ? '跟随当前时刻' : '归位当前'}
-            </button>
-            {timeInfo && (
-              <span className="text-[11px] tabular-nums text-ink-500">
-                {timeInfo.ganzhiText} · 旬空按日柱
+              <span className="font-song text-[12px] tracking-[0.04em] text-[#577365]">
+                {last ? `${POS_NAMES[castCount - 1]}　${lineDescription(last)}` : '尚未掷钱'}
               </span>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* 起卦台（原版三钱摇卦：大铜钱 + 进度 + 逐爻判决 + 卦象预览） */}
-        <div className="mt-4" key={castKey}>
-          <CastWorkbench onComplete={handleComplete} />
-        </div>
+            {/* 爻象生成台：移到钱下方 */}
+            <div className="mx-auto mt-4 max-w-[600px] border-t border-[#D7CDB8]/75 pt-3">
+              <div className="mb-2 flex items-center justify-center gap-3 font-song text-[12.5px] tracking-[0.28em] text-[#575A50]">
+                <span className="h-px w-6 bg-[#B89C6C]/65" />卦 象<span className="h-px w-6 bg-[#B89C6C]/65" />
+              </div>
+              <div className="mx-auto flex w-[190px] flex-col gap-[8px] py-2 sm:w-[230px]">
+                {Array.from({ length: 6 }, (_, idx) => {
+                  const pos = 6 - idx;
+                  const v = values[pos - 1];
+                  const yang = v === 7 || v === 9;
+                  const moving = v === 6 || v === 9;
+                  const color = !v ? '#D7D1C4' : moving ? '#A8453C' : '#3E4640';
+                  return (
+                    <div key={pos} className="flex h-[6px] items-center justify-center gap-3">
+                      <span className="w-5 text-right font-song text-[9px] text-[#9A8B70]">{POS_NAMES[pos - 1].replace('爻', '')}</span>
+                      {yang ? (
+                        <span className="h-[3px] w-[126px]" style={{ background: color }} />
+                      ) : (
+                        <span className="flex w-[126px] justify-between gap-3">
+                          <span className="h-[3px] flex-1" style={{ background: color }} />
+                          <span className="h-[3px] flex-1" style={{ background: color }} />
+                        </span>
+                      )}
+                      <span className="w-4 text-center font-song text-[9px] text-[#A8453C]">{moving ? (yang ? '○' : '×') : ''}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-center font-kai text-[11.5px] tracking-[0.1em] text-[#928774]">
+                自初爻起，自下而上{movingList.length ? `　·　动 ${movingList.map((p) => POS_NAMES[p - 1]).join('、')}` : ''}
+              </p>
+            </div>
 
-        {/* 手动指定 */}
-        <div className="mt-3 flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => setSheet('manual')}
-            className="press rounded-xs border border-line-strong px-4 py-2 text-[12.5px] text-ink-600 transition-colors hover:border-mist-500 hover:text-ink-900"
-          >
-            手动指定卦象（本卦 / 变卦）
-          </button>
-        </div>
-
-        <p className="mt-4 text-center text-[10.5px] leading-relaxed text-ink-400">
-          随机数取自浏览器 Web Crypto（逐位取用、无模偏差）；一事一占，卦成后可在顶部互相切换六爻与小成图。
-        </p>
-      </main>
-
-      {/* 手动指定 */}
-      {sheet === 'manual' && (
-        <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-ink-900/30 backdrop-blur-[2px]"
-          onClick={() => setSheet('none')}
-        >
-          <div
-            className="max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-t-lg bg-paper-0 px-5 pb-6 pt-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-song text-[15px] font-semibold tracking-[0.08em] text-ink-900">手动指定</h3>
-              <button type="button" onClick={() => setSheet('none')} className="press text-[12px] text-ink-500">
-                关闭
+            {/* 墨绿漆面 + 赭金双边按钮 */}
+            <div className="mx-auto mt-5 max-w-[420px] rounded-full border border-[#9C7A48] p-[3px] shadow-[0_2px_7px_rgba(96,76,43,0.16)]">
+              <button type="button" disabled={rolling || complete} onClick={doToss} className="press h-[52px] w-full rounded-full border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[17px] font-medium tracking-[0.4em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60">
+                {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
               </button>
             </div>
 
-            <GuaPicker label="本卦" value={benBinary} onChange={setBenBinary} />
-            <div className="mt-4">
-              <GuaPicker label="变卦（与本卦相同即静卦）" value={zhiBinary} onChange={setZhiBinary} />
+            <div className="mt-3 flex items-center justify-center gap-6 font-song text-[12px] text-[#6D746A]">
+              {!complete && <button type="button" onClick={quickCast} className="press hover:text-[#8E6337]">一键起卦</button>}
+              {castCount > 0 && <button type="button" onClick={reset} className="press hover:text-[#8E6337]">重新起卦</button>}
+              <button type="button" onClick={() => setSheet('manual')} className="press hover:text-[#8E6337]">手动指定</button>
             </div>
 
-            <div className="mt-4 flex items-center justify-between text-[12px] text-ink-600">
-              <span>
-                本卦 {SIXTY_FOUR_HEXAGRAMS[benBinary]?.name}　之　{SIXTY_FOUR_HEXAGRAMS[zhiBinary]?.name}
-              </span>
-              <span className={manualStatic ? 'text-mist-700' : 'text-cinnabar-600'}>
-                {manualStatic ? '静卦' : `动爻：${manualMoving.map((p) => POS_NAMES[p - 1]).join('、')}`}
-              </span>
-            </div>
+            {stats && (
+              <details className="mt-3 text-center">
+                <summary className="inline-block cursor-pointer list-none font-mono text-[10px] text-[#9B927F] hover:text-[#766A56]">随机源核查 ⓘ</summary>
+                <p className="mx-auto mt-1 max-w-[720px] font-mono text-[10px] leading-relaxed text-[#948A78]">
+                  Web Crypto · {stats.total} 掷：字/背 {stats.faceCounts[2]}/{stats.faceCounts[3]}（字 {(stats.faceRatio * 100).toFixed(2)}%，理论 50%）；6/7/8/9 理论 12.5/37.5/37.5/12.5%，实测最大偏差 {stats.maxDeviation.toFixed(2)}pp
+                </p>
+              </details>
+            )}
+          </section>
+        </div>
+      </main>
 
-            <div className="mt-4">
-              <Button size="lg" block onClick={manualComplete}>
-                以此卦起局
-              </Button>
+      {/* 手动指定卦 */}
+      {sheet === 'manual' && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink-900/30 backdrop-blur-[2px] sm:items-center sm:px-5" onClick={() => setSheet('none')}>
+          <div className="max-h-[90vh] w-full max-w-[620px] overflow-y-auto rounded-t-md bg-paper-0 px-5 pb-6 pt-4 shadow-[0_0_30px_rgba(53,45,31,0.15)] sm:rounded-md sm:border sm:border-line-strong" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-song text-[16px] font-semibold tracking-[0.12em] text-ink-900">手动指定卦象</h3>
+              <button type="button" onClick={() => setSheet('none')} className="press tap text-[12px] text-ink-500">关闭</button>
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-ink-400">
-              动爻由两卦逐爻比对自动得出；静卦将用宜变法（55 − 营数之和）取宜变之爻立之卦。
-            </p>
+            <GuaCombobox label="本卦" value={benBinary} onChange={setBenBinary} hint="输入卦名可筛选" />
+            <div className="mt-4">
+              <GuaCombobox label="变卦" value={zhiBinary} onChange={setZhiBinary} hint="本卦与变卦相同即静卦" />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 bg-[#F2EEE3] px-3 py-2.5 text-[12px] text-ink-700">
+              <span className="font-song">{SIXTY_FOUR_HEXAGRAMS[benBinary]?.name}　之　{SIXTY_FOUR_HEXAGRAMS[zhiBinary]?.name}</span>
+              <span className={manualStatic ? 'text-mist-700' : 'text-cinnabar-600'}>{manualStatic ? '静卦 · 宜变法立之卦' : `动爻 ${manualMoving.map((p) => POS_NAMES[p - 1]).join('、')}`}</span>
+            </div>
+            <div className="mt-4"><Button size="lg" block onClick={manualCommit} className="!bg-mist-900 hover:!bg-ink-900">确定此卦</Button></div>
           </div>
         </div>
       )}
 
-      {/* 卦成：选入口 */}
-      {values && (
-        <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-ink-900/30 backdrop-blur-[2px]"
-          onClick={() => setSheet('none')}
-        >
-          <div
-            className="w-full max-w-[560px] rounded-t-lg bg-paper-0 px-5 pb-6 pt-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-start justify-between gap-3">
+      {/* 卦成选择 */}
+      {sheet === 'choose' && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink-900/30 backdrop-blur-[2px] sm:items-center sm:px-5" onClick={() => setSheet('none')}>
+          <div className="w-full max-w-[560px] rounded-t-md border-t border-[#CDBB96] bg-[#FCF8EF] px-5 pb-6 pt-5 shadow-[0_0_30px_rgba(53,45,31,0.15)] sm:rounded-md sm:border" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="font-song text-[17px] font-semibold tracking-[0.08em] text-ink-900">
-                  {baseName ?? '六爻已齐'}
-                </h3>
-                <p className="mt-1">
-                  {moving.length ? (
-                    <span className="inline-flex items-center gap-1 text-[11.5px] text-cinnabar-600">
-                      <span aria-hidden>▸</span>
-                      动爻 {moving.map((p) => POS_NAMES[p - 1]).join('、')}
-                    </span>
-                  ) : (
-                    <span className="text-[11.5px] text-mist-700">六爻安静 · 静卦</span>
-                  )}
-                </p>
+                <p className="font-kai text-[10.5px] tracking-[0.18em] text-[#9A805A]">卦象已成</p>
+                <h3 className="mt-1 font-song text-[20px] font-semibold tracking-[0.1em] text-ink-900">{baseName ?? '六爻已备'}</h3>
+                <p className="mt-1 text-[11.5px] text-ink-600">{movingList.length ? `动爻 ${movingList.map((p) => POS_NAMES[p - 1]).join('、')}` : '六爻安静 · 静卦（小成图将以宜变法立之卦）'}</p>
               </div>
-              <button type="button" onClick={reset} className="press shrink-0 text-[11.5px] text-ink-500 underline-offset-4 hover:underline">
-                重新起卦
-              </button>
+              <button type="button" onClick={reset} className="press shrink-0 font-song text-[11.5px] text-ink-500 underline-offset-4 hover:underline">重起</button>
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="ink" size="lg" onClick={() => go('liuyao')}>
-                六爻解卦
-                <span className="rounded-[2px] bg-paper-0/20 px-1 text-[9.5px] font-normal">推荐</span>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button variant="ink" size="lg" onClick={() => go('liuyao')} className="min-h-[52px] flex-col !gap-0.5">
+                <span>六爻解卦</span><span className="text-[10.5px] font-normal opacity-70">纳甲 · 世应 · 六亲</span>
               </Button>
-              <Button variant="line" size="lg" onClick={() => go('xct')}>
-                小成图解盘
+              <Button variant="line" size="lg" onClick={() => go('xct')} className="min-h-[52px] flex-col !gap-0.5">
+                <span>小成图解盘</span><span className="text-[10.5px] font-normal opacity-70">用宫 · 九宫 · 正推</span>
               </Button>
             </div>
-            <p className="mt-2 text-center text-[10.5px] leading-relaxed text-ink-400">
-              六爻看纳甲世应，小成图看九宫四象 · 进任一侧后可在顶部一键互换
-            </p>
+            <p className="mt-3 text-center font-kai text-[11px] tracking-[0.06em] text-[#938873]">两种法门各有视角 · 进入后仍可切换</p>
           </div>
         </div>
       )}

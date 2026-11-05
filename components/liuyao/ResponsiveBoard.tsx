@@ -24,7 +24,7 @@ export default function ResponsiveBoard(props: HexagramBoardProps) {
 
     const measure = () => {
       const available = wrap.clientWidth;
-      const next = Math.min(1, Math.max(0.62, available / BOARD_BASE_WIDTH));
+      const next = Math.min(1, Math.max(0.7, available / BOARD_BASE_WIDTH));
       setScale(next);
       // 缩放后实际占位高度要同步，否则下方会留一大块空白
       const natural = innerRef.current?.offsetHeight ?? 0;

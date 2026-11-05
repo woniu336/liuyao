@@ -115,7 +115,7 @@ export interface HexagramBoardProps extends BoardViewProps {
 
 const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function HexagramBoard(props, ref) {
   const { question, gender, datetime_info, hexagram_info, lines, highlightPosition, highlightLabel = '用神' } = props;
-  const barColor = '#2C2723';
+  const barColor = '#141C22';
 
   // 上爻(6) → 初爻(1)
   const sortedLines = useMemo(() => [...lines].sort((a, b) => b.position - a.position), [lines]);
@@ -216,13 +216,13 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
 
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 8px', marginTop: 2 }}>
           <span style={{ color: '#7A7165' }}>干支：</span>
-          <span style={{ color: '#B91C1C', fontWeight: 700 }}>{timeInfo.monthDisplay}</span>
-          <span style={{ color: '#B91C1C', fontWeight: 700 }}>{timeInfo.dayDisplay}</span>
-          <span style={{ color: '#B91C1C', fontWeight: 700, marginLeft: 2 }}>(旬空 {timeInfo.voidStr})</span>
+          <span style={{ color: '#8F3323', fontWeight: 700 }}>{timeInfo.monthDisplay}</span>
+          <span style={{ color: '#8F3323', fontWeight: 700 }}>{timeInfo.dayDisplay}</span>
+          <span style={{ color: '#8E582B', fontWeight: 700, marginLeft: 2 }}>(旬空 {timeInfo.voidStr})</span>
         </div>
 
         {/* 十三实用星煞 */}
-        <div style={{ marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12.5, lineHeight: 1.6 }}>
+        <div style={{ marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12.5, lineHeight: 1.75 }}>
           <span style={{ color: '#7A7165', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>神煞：</span>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 8px', flex: 1 }}>
             {SHENSHA_ORDER.map(({ key, label }) => {
@@ -272,7 +272,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
           <div style={{ width: 6, flexShrink: 0 }} />
 
           <div style={{ width: 144, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-            <span style={{ color: '#1E40AF', fontSize: 16, fontWeight: 800 }}>{hexagram_info.base_name}</span>
+            <span style={{ color: '#244450', fontSize: 17, fontWeight: 800, letterSpacing: 1 }}>{hexagram_info.base_name}</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: '#5C5449' }}>({baseAttrTag})</span>
           </div>
 
@@ -280,7 +280,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
             <>
               <div style={{ width: 30, flexShrink: 0 }} />
               <div style={{ width: 178, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                <span style={{ color: '#1E40AF', fontSize: 16, fontWeight: 800 }}>{changedTitle}</span>
+                <span style={{ color: '#3D6673', fontSize: 16, fontWeight: 800, letterSpacing: 0.5 }}>{changedTitle}</span>
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#5C5449' }}>({changedAttrTag})</span>
               </div>
             </>
@@ -324,7 +324,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
                 key={line.position}
                 style={{
                   position: 'relative',
-                  height: 35,
+                  height: 37,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'flex-start',
@@ -398,7 +398,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
                       textAlign: 'center',
                       fontSize: 12,
                       fontWeight: 800,
-                      color: line.is_world ? '#B91C1C' : line.is_response ? '#059669' : 'transparent',
+                      color: line.is_world ? '#8F3323' : line.is_response ? '#3F6B55' : 'transparent',
                       flexShrink: 0,
                     }}
                   >
@@ -417,7 +417,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: 2,
-                          color: line.is_moving ? '#B91C1C' : 'transparent',
+                          color: line.is_moving ? '#8F3323' : 'transparent',
                           flexShrink: 0,
                           userSelect: 'none',
                         }}
@@ -449,7 +449,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
                             width: 68,
                             fontSize: 13,
                             fontWeight: line.is_moving ? 700 : 500,
-                            color: line.is_moving ? '#B91C1C' : '#4B443B',
+                            color: line.is_moving ? '#8F3323' : '#33424A',
                             letterSpacing: 0.2,
                             flexShrink: 0,
                           }}
@@ -467,7 +467,7 @@ const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function He
 
                         <div style={{ width: 52, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                           {relationTags.length > 0 && (
-                            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#B91C1C', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#8E582B', whiteSpace: 'nowrap' }}>
                               [{relationTags.join('')}]
                             </span>
                           )}

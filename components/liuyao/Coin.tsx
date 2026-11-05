@@ -14,9 +14,13 @@ import React, { useEffect, useState } from 'react';
 
 export type CoinSide = '字' | '背';
 
-const FACE_SRC: Record<CoinSide, string> = {
-  字: '/images/coin-4.png',
-  背: '/images/coin-3.png',
+/**
+ * 正反面照片。源图只有 85×85，直接放大到 148 设备像素会发虚，
+ * 所以预生成 2x（170×170，Lanczos）并用 srcSet 交给浏览器按 DPR 选择。
+ */
+const FACE_SRC: Record<CoinSide, { x1: string; x2: string; x3: string }> = {
+  字: { x1: '/images/coin-4.png', x2: '/images/coin-4@2x.png', x3: '/images/coin-4@3x.png' },
+  背: { x1: '/images/coin-3.png', x2: '/images/coin-3@2x.png', x3: '/images/coin-3@3x.png' },
 };
 
 export function Coin({
@@ -88,7 +92,8 @@ export function Coin({
         {(['字', '背'] as CoinSide[]).map((face) => (
           <img
             key={face}
-            src={FACE_SRC[face]}
+            src={FACE_SRC[face].x1}
+            srcSet={`${FACE_SRC[face].x1} 1x, ${FACE_SRC[face].x2} 2x, ${FACE_SRC[face].x3} 3x`}
             alt=""
             draggable={false}
             style={{
@@ -99,7 +104,8 @@ export function Coin({
               objectFit: 'contain',
               backfaceVisibility: 'hidden',
               transform: face === '字' ? 'rotateY(0deg)' : 'rotateY(180deg)',
-              filter: 'drop-shadow(0 4px 8px rgba(31,42,48,0.22))',
+              // 去掉外发光/重投影：85px 源图经放大后，阴影反而加重"糊"的感觉
+              filter: 'none',
             }}
           />
         ))}
