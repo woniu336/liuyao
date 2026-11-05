@@ -247,6 +247,14 @@ textarea::placeholder {
   .hex.stagger .line { animation: none; }
 }
 
+/* 隐藏原生日期选择器图标（起卦时间改用「修改」文字按钮唤起） */
+.no-native-picker::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.no-native-picker::-webkit-inner-spin-button {
+  display: none;
+}
+
 /* 研墨中：一滴墨落纸，涟漪两圈（解卦等待态用） */
 @keyframes ink-ripple {
   0% { transform: scale(0.55); opacity: 0.55; }

@@ -17,7 +17,7 @@ import { Coin, type CoinSide } from '@/components/liuyao/Coin';
 import GuaCombobox from './GuaCombobox';
 import { Button } from '@/components/ui';
 import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
-import { tossStats, tossThree } from '@/lib/liuyao/random';
+import { tossThree } from '@/lib/liuyao/random';
 import { encodeCastState } from '@/lib/liuyao/cast-url';
 import { castTimeInfo, nowTimeInput, parseTimeInput } from '@/lib/liuyao/ganzhi';
 import { masksOf, movingLineNumbers } from '@/lib/hexagram/hex-math';
@@ -54,7 +54,6 @@ export default function CastPage() {
   const router = useRouter();
   const [question, setQuestion] = useState('');
   const [gender, setGender] = useState<'男' | '女'>('男');
-  const [marital, setMarital] = useState<'unmarried' | 'married'>('unmarried');
   const [timeInput, setTimeInput] = useState('');
   const [autoTime, setAutoTime] = useState(true);
 
@@ -64,16 +63,15 @@ export default function CastPage() {
   const [tossKey, setTossKey] = useState(0);
   const [lastSum, setLastSum] = useState<CoinResult | null>(null);
   const settleTimerRef = useRef<number | null>(null);
+  const timeInputRef = useRef<HTMLInputElement | null>(null);
   const settledRef = useRef(false);
 
   const [sheet, setSheet] = useState<'none' | 'manual' | 'choose'>('none');
   const [benBinary, setBenBinary] = useState('111111');
   const [zhiBinary, setZhiBinary] = useState('111111');
-  const [stats, setStats] = useState<ReturnType<typeof tossStats> | null>(null);
 
   useEffect(() => {
     setTimeInput(nowTimeInput());
-    setStats(tossStats(2000));
     return () => {
       if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
     };
@@ -166,7 +164,7 @@ export default function CastPage() {
       coins: values,
       timeInput: autoTime ? nowTimeInput() : timeInput,
       gender,
-      marital,
+      marital: 'unmarried',
       question,
     });
     router.push(`/liuyao?${qs}`);
@@ -238,40 +236,40 @@ export default function CastPage() {
                   ))}
                 </div>
               </div>
-
-              <span className="hidden h-7 w-px bg-[#D7CDB8] sm:block" />
-
-              <div className="flex items-center gap-3">
-                <span className="font-song text-[13px] text-[#665F52]">婚否</span>
-                <div className="flex items-center overflow-hidden rounded-full border border-[#D0C6B2]">
-                  {(['unmarried', 'married'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMarital(m)}
-                      className={`press min-h-[36px] min-w-[64px] px-3 font-song text-[12.5px] transition-colors ${
-                        marital === m ? 'bg-[#DDE4D8] text-[#334B40]' : 'bg-transparent text-[#8A8476]'
-                      }`}
-                    >
-                      {m === 'unmarried' ? '未婚' : '已婚'}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2 py-4">
               <Clock3 size={16} strokeWidth={1.6} className="text-[#98784A]" />
               <span className="font-song text-[13px] text-[#665F52]">起卦</span>
               <input
+                ref={timeInputRef}
                 type="datetime-local"
                 value={timeInput}
                 onChange={(e) => {
                   setAutoTime(false);
                   setTimeInput(e.target.value);
                 }}
-                className="h-9 max-w-[195px] border-0 bg-transparent p-0 font-mono text-[13px] tabular-nums text-[#534F45] outline-none"
+                className="no-native-picker h-9 max-w-[195px] border-0 bg-transparent p-0 font-mono text-[13px] tabular-nums text-[#534F45] outline-none"
               />
+              <button
+                type="button"
+                onClick={() => {
+                  // 原生选择器图标被隐藏，这里显式唤起；不支持 showPicker 的浏览器退回聚焦
+                  const el = timeInputRef.current;
+                  if (!el) return;
+                  el.focus();
+                  if (typeof el.showPicker === 'function') {
+                    try {
+                      el.showPicker();
+                    } catch {
+                      /* 非用户手势等情况下浏览器会拒绝，忽略 */
+                    }
+                  }
+                }}
+                className="press inline-flex h-7 items-center rounded-[3px] border border-[#CBBFA8] px-2 font-song text-[11.5px] text-[#6E6A5C] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]"
+              >
+                修改
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -339,14 +337,6 @@ export default function CastPage() {
                 {last ? `${POS_NAMES[castCount - 1]}　${lineDescription(last)}` : '尚未掷钱'}
               </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setSheet('manual')}
-                className="press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[3px] border border-[#9C7A48] bg-[#FBF7EC] px-3 font-song text-[12px] tracking-[0.08em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
-              >
-                <PenLine size={13} strokeWidth={1.7} />
-                手动指定
-              </button>
             </div>
 
             {/* 爻象生成台：移到钱下方 */}
@@ -391,20 +381,21 @@ export default function CastPage() {
               </button>
             </div>
 
-            {castCount > 0 && (
-              <div className="mt-3 flex items-center justify-center font-song text-[12px] text-[#6D746A]">
-                <button type="button" onClick={reset} className="press hover:text-[#8E6337]">重新起卦</button>
-              </div>
-            )}
-
-            {stats && (
-              <details className="mt-3 text-center">
-                <summary className="inline-block cursor-pointer list-none font-mono text-[10px] text-[#9B927F] hover:text-[#766A56]">随机源核查 ⓘ</summary>
-                <p className="mx-auto mt-1 max-w-[720px] font-mono text-[10px] leading-relaxed text-[#948A78]">
-                  Web Crypto · {stats.total} 掷：字/背 {stats.faceCounts[2]}/{stats.faceCounts[3]}（字 {(stats.faceRatio * 100).toFixed(2)}%，理论 50%）；6/7/8/9 理论 12.5/37.5/37.5/12.5%，实测最大偏差 {stats.maxDeviation.toFixed(2)}pp
-                </p>
-              </details>
-            )}
+            <div className="mt-3 flex flex-col items-center gap-2.5">
+              {castCount > 0 && (
+                <button type="button" onClick={reset} className="press font-song text-[12px] text-[#6D746A] hover:text-[#8E6337]">
+                  重新起卦
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSheet('manual')}
+                className="press inline-flex h-9 items-center gap-1.5 rounded-[3px] border border-[#9C7A48] bg-[#FBF7EC] px-3 font-song text-[12px] tracking-[0.08em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
+              >
+                <PenLine size={13} strokeWidth={1.7} />
+                手动指定
+              </button>
+            </div>
           </section>
         </div>
       </main>

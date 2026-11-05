@@ -43,6 +43,10 @@
 - `/cases` 更名「历史排盘」（UI 文案 + metadata）。
 - 全局 `<footer>` 已从 `app/layout.tsx` 删除。
 - **移动端悬浮起卦**：首页 `sm` 以下把「掷钱起爻」做成底部固定条（`safe-bottom`），行内按钮 `hidden sm:block`。
+- **首页第三轮**：删「婚否」与「随机源核查」；「手动指定」移到「重新起卦」下方居中；
+  起卦时间的原生选择器图标隐藏，改成中文「修改」按钮（`input.showPicker()`，`app/globals.css` 的 `.no-native-picker`）。
+- **截图错位修复**：`html-to-image` 克隆节点时 `mx-auto` 会按外层容器重新居中，宽屏下（卡片 440 < 容器）整块右移被裁。
+  现在 `toPng` 传 `width/height` + `style:{ margin:'0', transform:'none' }`，PC 导出与屏幕一致。
 - **解卦体验**：起解即 `scrollIntoView` 到解卦段（`scroll-mt-20` 避开吸顶条），等待态换成「研墨中」墨滴动画
   （`.ink-ripple` / `.ink-drop`，见 `app/globals.css`，尊重 `prefers-reduced-motion`）。
 - **动爻位提示修正**：`movingPositions` 是 0-based，页面文案错一位；新增 `movingLineNumbers`（1-based）并补测试。

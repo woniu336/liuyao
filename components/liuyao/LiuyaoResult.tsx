@@ -68,10 +68,16 @@ export default function LiuyaoResult({
     setShooting(true);
     try {
       const { toPng } = await import('html-to-image');
+      // 注意：捕获节点的 `mx-auto` 在克隆里会按**外层容器**重新居中，
+      // 宽屏下（卡片比容器窄）就会整体右移、右侧被裁掉。这里把外边距钉成 0，
+      // 并把宽高写死，导出的图才和屏幕上这块纸一致。
       const dataUrl = await toPng(node, {
         pixelRatio: 3,
         backgroundColor: '#FCFAF3',
         cacheBust: true,
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        style: { margin: '0', transform: 'none' },
       });
       const name = `六爻_${boardProps.hexagram_info.base_name}_${boardProps.datetime_info.solar_date.replace(/[^\d]/g, '').slice(0, 12)}.png`;
       const a = document.createElement('a');
