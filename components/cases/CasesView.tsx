@@ -15,7 +15,7 @@ import { getCaseStore } from '@/lib/store';
 import { caseTimeLabel } from '@/lib/cases/record';
 import type { CaseRecord } from '@/lib/store/types';
 
-const KIND_LABEL: Record<CaseRecord['kind'], string> = { liuyao: '六爻', xct: '小成图' };
+const KIND_LABEL: Record<CaseRecord['kind'], string> = { liuyao: '六爻' };
 
 export default function CasesView() {
   const [items, setItems] = useState<CaseRecord[] | null>(null);
@@ -85,14 +85,11 @@ export default function CasesView() {
         <div className="rounded-md border border-[#E0D8C9] bg-[#FFFDF8] px-5 py-12 text-center">
           <p className="text-[13px] text-[#5e5a50]">还没有排盘记录。</p>
           <p className="mt-2 text-[11.5px] text-[#8c8272]">
-            六爻解卦完成会自动归档到这里；小成图在盘面右上角点「保存卦例」即会记录。
+            六爻解卦完成后会自动归档到这里；也可以从盘面右上角「截图」旁的历史入口回看。
           </p>
           <div className="mt-4 flex items-center justify-center gap-3 text-[12px]">
-            <Link href="/liuyao" className="rounded-[2px] border border-[#CBBFA8] px-3 py-1.5 text-[#5e5a50] hover:border-[#8a8378] hover:text-[#22201b]">
-              去起六爻
-            </Link>
-            <Link href="/xct" className="rounded-[2px] border border-[#CBBFA8] px-3 py-1.5 text-[#5e5a50] hover:border-[#8a8378] hover:text-[#22201b]">
-              去起小成图
+            <Link href="/" className="rounded-[2px] border border-[#CBBFA8] px-3 py-1.5 text-[#5e5a50] hover:border-[#8a8378] hover:text-[#22201b]">
+              去起一卦
             </Link>
           </div>
         </div>
@@ -154,7 +151,7 @@ export default function CasesView() {
                     <Trash2 size={13} />
                   </button>
                   <Link
-                    href={`/${r.kind === 'liuyao' ? 'liuyao' : 'xct'}?case=${r.id}`}
+                    href={`/liuyao?case=${r.id}`}
                     className="ml-1 rounded-[2px] border border-[#CBBFA8] px-2.5 py-1.5 text-[11.5px] text-[#5e5a50] transition-colors hover:border-[#8a8378] hover:text-[#22201b]"
                   >
                     打开

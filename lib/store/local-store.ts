@@ -26,7 +26,7 @@ function isRecord(x: unknown): x is CaseRecord {
   const r = x as Partial<CaseRecord>;
   return (
     typeof r.id === 'string' &&
-    (r.kind === 'liuyao' || r.kind === 'xct') &&
+    r.kind === 'liuyao' &&
     typeof r.createdAt === 'string' &&
     typeof r.timeInput === 'string' &&
     typeof r.question === 'string' &&

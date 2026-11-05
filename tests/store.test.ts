@@ -15,19 +15,16 @@ class FakeStorage implements StorageLike {
   }
 }
 
-function rec(id: string, createdAt: string, kind: 'liuyao' | 'xct' = 'liuyao'): CaseRecord {
+function rec(id: string, createdAt: string): CaseRecord {
   return {
     id,
     schema: 1,
-    kind,
+    kind: 'liuyao',
     createdAt,
     timeInput: '2026-11-05T12:02',
     question: `问${id}`,
     gender: '男',
-    input:
-      kind === 'liuyao'
-        ? { kind, method: 'coin', coins: [1, 1, 1, 1, 1, 1], question: '', gender: '男' }
-        : { kind, method: 'four', tianDiNums: ['1', '1', '4', '6'] },
+    input: { kind: 'liuyao', method: 'coin', coins: [7, 7, 7, 7, 7, 7], question: '', gender: '男' },
     summary: { primary: '乾为天', changed: null },
   };
 }

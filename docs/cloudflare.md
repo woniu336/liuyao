@@ -13,7 +13,7 @@ npm run check:portability   # 运行时代码是否有 fs/node 内置、next/ima
 
 | 路由 | 形态 | 说明 |
 |---|---|---|
-| `/`、`/liuyao`、`/xct`、`/cases` | 静态预渲染 | 引擎全在客户端，纯函数 |
+| `/`、`/liuyao`、`/cases`、`/classics` | 静态预渲染 | 引擎全在客户端，纯函数 |
 | `/api/read` | 动态（服务端） | 解卦流式代理；只收盘面事实，key 只在服务端 |
 
 - 运行时没有 `fs` / `node:*`；唯一例外 `lib/dev/dev-origins.ts` 只被 `next.config.ts`（构建期）引用。
@@ -72,7 +72,7 @@ npm run check:portability   # 运行时代码是否有 fs/node 内置、next/ima
 | 项目 | 结果 |
 |---|---|
 | `vinext init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none` | 生成 `vite.config.ts` + `cloudflare.config.ts`，React 升 19.3.1 |
-| `vite dev`（workerd） | `/` `/liuyao` `/xct` `/cases` 全 200；六爻起卦→排盘→保存→打开、小成图起盘→点宫全部正常，0 console error |
+| `vite dev`（workerd） | `/` `/liuyao` `/cases` 全 200；六爻起卦→排盘→解卦→归档→历史回看全部正常，0 console error |
 | 本地 D1 | `bindings.d1({name})` + `cloudflare:workers` 的 `env.DB` 可建表/写入/查询，跨请求持久（`.cloudflare/state/v3/d1/*.sqlite`） |
 | WebCrypto | HMAC-SHA256 签名/验签、`crypto.randomUUID` 可用 |
 | `/api/read` | 指向本地 mock 上游时 SSE 逐字下发 + done 事件正常（workerd 内 fetch 流式 OK） |

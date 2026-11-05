@@ -106,7 +106,7 @@ describe('起卦路径不得使用 Math.random（守卫生效）', () => {
   const root = path.resolve(__dirname, '..');
   const guarded = [
     'components/liuyao/CastWorkbench.tsx',
-    'components/xct/XiaoChengTuView.tsx',
+    'components/cast/CastPage.tsx',
     'lib/liuyao/random.ts',
   ];
 

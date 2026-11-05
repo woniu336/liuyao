@@ -6,8 +6,8 @@
  *   2. prompt 由服务端拼装（app/api/read/prompt.ts），不随客户端 bundle 下发；
  *   3. 事实层只描述排盘结果，不含用神取舍与吉凶结论——那属于解读层。
  *
- * 现在只落地契约与 /api/read 通道，暂时没有前端入口：
- * 断卦口径（宗法用神、吉凶表达、应期）是产品决策，定了再接 UI。
+ * 目前只有六爻一条链路：事实层由 lib/readings/facts.ts 打包，
+ * prompt 在 app/api/read/prompt.ts 服务端拼装。
  */
 
 export interface ReadingTimeFacts {
@@ -72,45 +72,7 @@ export interface LiuyaoReadingFacts {
   };
 }
 
-export interface XctPalaceFacts {
-  palace: number;
-  palaceName: string;
-  heaven: string;
-  earth: string;
-  hexName: string;
-  /** 天盘/地盘的升降（阖辟往来四象的判定依据） */
-  rising: { heaven: '升' | '降'; earth: '升' | '降' };
-  mode: string | null;
-  matched: boolean | null;
-  verdict: string;
-}
-
-export interface XctReadingFacts {
-  kind: 'xct';
-  question: string;
-  time: ReadingTimeFacts;
-  /** 求测者信息：小成图用宫按性别与婚否分路 */
-  gender: '男' | '女';
-  marital: 'married' | 'unmarried' | 'unknown';
-  /** 起卦来源：coin 由六爻转化；four/time/self 为小成图自起 */
-  castFrom: 'coin' | 'four' | 'time' | 'self';
-  ben: { upper: string; lower: string; name: string };
-  zhi: { upper: string; lower: string; name: string };
-  center: string;
-  palaces: XctPalaceFacts[];
-  /** 卦 → 地盘本宫（供解卦者自行正推/逆推，避免预先钉死一条链） */
-  guaToPalace: Record<string, number>;
-  /** 天盘出现 / 缺席 / 重复的卦（婚姻、生育、学历等硬判据） */
-  heavenSeen: string[];
-  heavenMissing: string[];
-  heavenDuplicate: string[];
-  /** 六爻安静时以宜变法立之卦；有动爻时为参看 */
-  yiBian: { position: number | null; sum: number; movingCount: number; note: string; zhiSource: 'moving' | 'yibian' } | null;
-  /** 若由六爻转化：动爻位（1..6） */
-  movingLines: number[];
-}
-
-export type ReadingFacts = LiuyaoReadingFacts | XctReadingFacts;
+export type ReadingFacts = LiuyaoReadingFacts;
 
 export interface ReadingRequestBody {
   facts: ReadingFacts;

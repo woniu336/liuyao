@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CastWorkbench from './CastWorkbench';
@@ -16,6 +16,12 @@ import { getCaseStore } from '@/lib/store';
 import { buildLiuyaoRecord } from '@/lib/cases/record';
 
 type CastMode = 'coin' | 'yarrow' | 'manual';
+
+/**
+ * 服务端渲染时 useLayoutEffect 会告警，这里降级成 useEffect。
+ * 浏览器里用 layout effect：复原占位能在首帧前挂上，不会先闪一下表单。
+ */
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 const MODES: { id: CastMode; label: string; hint: string }[] = [
   { id: 'coin', label: '三钱摇卦', hint: '六次掷币，每次三枚' },
@@ -49,6 +55,8 @@ export default function LiuyaoView() {
   } | null>(null);
   const [error, setError] = useState('');
   const [savedId, setSavedId] = useState<string | null>(null);
+  /** 复原（?c= / ?case=）是否已经跑完：决定要不要显示「排盘中」占位 */
+  const [restoreSettled, setRestoreSettled] = useState(false);
   const paperRef = useRef<HTMLDivElement | null>(null);
   const restoredRef = useRef(false);
 
@@ -99,24 +107,32 @@ export default function LiuyaoView() {
       setTimeInput(cast.timeInput);
       setAutoTime(false);
       applyCast(cast.coins, cast.timeInput, 'coin');
+      setRestoreSettled(true);
       return;
     }
 
     const id = params.get('case');
-    if (!id) return;
+    if (!id) {
+      setRestoreSettled(true);
+      return;
+    }
     void (async () => {
-      const store = await getCaseStore();
-      const record = await store.get(id);
-      if (!record || record.kind !== 'liuyao' || record.input.kind !== 'liuyao') {
-        setError('卦例不存在或类型不符');
-        return;
+      try {
+        const store = await getCaseStore();
+        const record = await store.get(id);
+        if (!record || record.kind !== 'liuyao' || record.input.kind !== 'liuyao') {
+          setError('卦例不存在或类型不符');
+          return;
+        }
+        setQuestion(record.input.question ?? '');
+        setGender(record.input.gender ?? '男');
+        setMethod(record.input.method);
+        setTimeInput(record.timeInput);
+        setAutoTime(false);
+        applyCast(record.input.coins, record.timeInput, record.input.method);
+      } finally {
+        setRestoreSettled(true);
       }
-      setQuestion(record.input.question ?? '');
-      setGender(record.input.gender ?? '男');
-      setMethod(record.input.method);
-      setTimeInput(record.timeInput);
-      setAutoTime(false);
-      applyCast(record.input.coins, record.timeInput, record.input.method);
     })();
   }, [applyCast]);
 
@@ -164,16 +180,19 @@ export default function LiuyaoView() {
 
   const manualComplete = manual.every((v): v is CoinResult => v !== null);
 
+  /**
+   * 带起卦参数进来时先占位，等复原完成再渲染表单。
+   * 判定放在 layout effect 里（不在 render 里读 window），否则 SSR 与客户端首帧不一致会触发 hydration 报错。
+   */
+  const [hasCastParams, setHasCastParams] = useState(false);
+  useIsoLayoutEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.has('c') || p.has('case')) setHasCastParams(true);
+  }, []);
+  const awaitingRestore = !result && !restoreSettled && hasCastParams;
+
   // ───────────────────────── 盘面（原项目结果页版式） ─────────────────────────
   if (boardProps && readingFacts) {
-    const switchToXct = () => {
-      const qs = new URLSearchParams(window.location.search);
-      const c = qs.get('c');
-      const t = qs.get('t');
-      if (c && t) window.location.href = `/xct?${qs.toString()}`;
-      else window.location.href = '/xct';
-    };
-
     return (
       <LiuyaoResult
         boardProps={boardProps}
@@ -181,8 +200,16 @@ export default function LiuyaoView() {
         question={question}
         onReset={handleReset}
         onSave={handleSave}
-        onSwitchXct={switchToXct}
       />
+    );
+  }
+
+  // 复原中：给一张空白纸，不闪表单
+  if (awaitingRestore) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F1E8] font-song text-[12.5px] tracking-[0.2em] text-[#8C8272]">
+        排盘中…
+      </div>
     );
   }
 

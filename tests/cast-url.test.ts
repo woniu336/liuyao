@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coinSidesOf, decodeCastState, encodeCastState } from '../lib/liuyao/cast-url';
 import { binaryOf, movingBetween } from '../lib/liuyao/hexagram-index';
-import { structureFromCoins } from '../lib/xct/yi-bian';
 
 describe('起卦参数的 URL 编解码', () => {
   const state = {
@@ -53,21 +52,5 @@ describe('手动指定：动爻由两卦比对自动得出', () => {
   it('上下卦拼装顺序：初爻在下', () => {
     // 乾上坤下 = 天地否 → 111000
     expect(binaryOf('111', '000')).toBe('000111');
-  });
-});
-
-describe('静卦也能立小成图（宜变法）', () => {
-  it('全静 7 → 宜变之爻翻出之卦', () => {
-    const s = structureFromCoins([7, 7, 7, 7, 7, 7]);
-    expect(s.moving).toHaveLength(1);
-    expect(s.zhiSource).toBe('yibian');
-    expect(s.ben).toEqual({ upper: '乾', lower: '乾' });
-    expect(s.zhi).not.toEqual(s.ben);
-  });
-
-  it('有动爻时之卦由动爻决定，不动用宜变', () => {
-    const s = structureFromCoins([9, 7, 7, 7, 7, 7]);
-    expect(s.moving).toEqual([1]);
-    expect(s.zhiSource).toBe('moving');
   });
 });

@@ -15,7 +15,6 @@
  */
 
 import { buildLiuyaoPrompt } from './prompt';
-import { buildXctPrompt } from './prompt-xct';
 import type { ReadingFacts } from '@/lib/readings/types';
 import { getAdminStore } from '@/lib/admin/store';
 import {
@@ -135,9 +134,8 @@ async function resolveLlmConfig(): Promise<LlmResolution> {
 function validFacts(x: unknown): x is ReadingFacts {
   if (!x || typeof x !== 'object') return false;
   const f = x as Partial<ReadingFacts>;
-  if (f.kind === 'liuyao') return Array.isArray((f as never as { lines?: unknown }).lines);
-  if (f.kind === 'xct') return Array.isArray((f as never as { palaces?: unknown }).palaces);
-  return false;
+  if (f.kind !== 'liuyao') return false;
+  return Array.isArray((f as never as { lines?: unknown }).lines);
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -179,8 +177,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const { system, user } =
-    facts.kind === 'liuyao' ? buildLiuyaoPrompt(facts) : buildXctPrompt(facts);
+  const { system, user } = buildLiuyaoPrompt(facts);
 
   let upstream: Response;
   try {

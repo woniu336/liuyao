@@ -3,12 +3,11 @@
  *
  * 记录里不存盘面（盘面由引擎重算），只存能复现这一卦的最小事实：
  * 六爻 → 时间 + 投掷 + 方法 + 问句 + 性别
- * 小成图 → 时间 + 起卦法 + 四数 / 自定八卦
  */
 
 import type { LiuyaoChart } from '@/lib/liuyao/najia';
 import type { CastTimeInfo } from '@/lib/liuyao/ganzhi';
-import type { CaseRecord, LiuyaoMethod, XctMethod } from '@/lib/store/types';
+import type { CaseRecord, LiuyaoMethod } from '@/lib/store/types';
 
 export function newCaseId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -41,40 +40,6 @@ export function buildLiuyaoRecord(args: {
       primary: chart.base.name,
       changed: chart.changed?.name ?? null,
       tags: chart.base.tags,
-    },
-  };
-}
-
-export function buildXctRecord(args: {
-  benName: string;
-  zhiName: string;
-  center: string;
-  timeInput: string;
-  method: XctMethod;
-  tianDiNums?: [string, string, string, string];
-  timeDate?: string;
-  manual?: { benUpper: string; benLower: string; zhiUpper: string; zhiLower: string };
-  question?: string;
-}): CaseRecord {
-  const { benName, zhiName, center, timeInput, method, tianDiNums, timeDate, manual, question = '' } = args;
-  return {
-    id: newCaseId(),
-    schema: 1,
-    kind: 'xct',
-    createdAt: new Date().toISOString(),
-    timeInput,
-    question,
-    input: {
-      kind: 'xct',
-      method,
-      ...(tianDiNums ? { tianDiNums } : {}),
-      ...(timeDate ? { timeDate } : {}),
-      ...(manual ? { manual } : {}),
-    },
-    summary: {
-      primary: benName,
-      changed: zhiName,
-      tags: center ? [`中宫${center}`] : [],
     },
   };
 }

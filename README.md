@@ -1,22 +1,21 @@
-# liuyao · 六爻 / 小成图 确定性排盘
+# 易林寻踪 · 六爻确定性排盘
 
-从 [bazi-web](https://github.com/woniu336/bazi-web) 抽出并裁剪的两个排盘工具，单进程跑：
+从 [bazi-web](https://github.com/woniu336/bazi-web) 抽出的六爻排盘工具，单进程跑：
 
 | 工具 | 保留 | 移除 |
 | --- | --- | --- |
-| **首页**（`/`） | 求测事项 / 性别 / 婚否 / 时间 + 三钱摇卦；可手动指定本卦/变卦；卦成后选择解读体系 | 起卦 UI 不藏求测人与时间信息 |
+| **首页**（`/`） | 求测事项 / 性别 / 婚否 / 时间 + 三钱摇卦；可手动指定本卦/变卦 | 起卦 UI 不藏求测人与时间信息 |
 | **六爻**（`/liuyao`） | 纳甲装卦、安世应、定六亲、旬空、伏神、六神、月卦身、十三神煞；可请求禅意解读 | 模型不重排盘，只解释确定性事实 |
-| **小成图**（`/xct`） | 独立起卦 + 接收首页六爻卦；用宫、九宫四象、正推解盘 | 不混入六爻的五行、六亲、世应体系 |
 | **易学典籍**（`/classics`） | 周易经传与象数文献入口 / 分类框架 | 原文与版本核校后逐步加入 |
 
 排盘由确定性引擎负责；解读依盘面事实展开，不重排、不改写盘面。问句用于表达所问与解读上下文，不参与物理排盘计算。
 
 ## 起卦首页与视觉
 
-首页参考用户提供的 `设计参考.txt` 与设计图：顶部导航「起卦 / 卦例 / 易学典籍 / 关于」、
+首页参考用户提供的 `设计参考.txt` 与设计图：顶部导航「六爻 / 古籍 / 历史排盘」、
 淡墨山水、宣纸求测笺与真铜钱摇卦。页首只保留「取象于天地，观变于阴阳」，标题区较短。
 
-- 求测事项、性别、婚否、时间都在明面；婚否用于小成图婚占取用。
+- 求测事项、性别、婚否、时间都在明面；婚否只作落款记录。
 - 三枚铜钱用 `coin-4`（字）/ `coin-3`（背）真图，保持原设计尺寸（移动约 74px / 宽屏 84px）；
   使用 2x/3x sourceSet，Web Crypto 掷币，动画落定后提交结果。
 - 爻象生成台排在铜钱下方；手动指定为可输入的六十四卦下拉（全名/简称均可搜），动爻自动比对。
@@ -52,13 +51,11 @@ npm run deploy:vinext   # 需要先 cf auth login
 ## 目录
 
 ```
-app/                    首页 / 六爻页 / 小成图页
+app/                    首页 / 六爻页 / 历史排盘 / 古籍
 components/liuyao/      六爻：LiuyaoView（起卦表单）· CastWorkbench（三钱/大衍）· ManualCast · HexagramBoard（古法卦单）
-components/xct/         小成图：XiaoChengTuView · NinePalaceBoard · HexagramFigure · ZhengTuiPathView · VerdictCard · ReportView
 lib/liuyao/najia.ts     六爻确定性排盘引擎（core.py 的逐条移植）
 lib/liuyao/board-view.ts 引擎结果 → 盘面视图数据 + 复制文本
 lib/liuyao/ganzhi.ts    起卦时刻 → 四柱干支
-lib/xct/                小成图引擎（boardBuilder / judgeEngine / dagTracker / constants / guizang）
 lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
 tests/                  差分基准与引擎自证
 ```
@@ -132,17 +129,6 @@ npm test
 新增的「天医（月建前一位）」「文昌（依日干）」不参与差分（原 core.py 没有），
 由 `tests/liuyao-engine.test.ts` 单独断言。
 
-## 小成图引擎
-
-`lib/xct/` 与 bazi-web 同源，未改算法。`tests/xct-engine.test.ts` 遍历
-64×64 种本卦/之卦组合 × 9 宫，断言：
-
-- 八方断语必落在四象八断集合内，中宫恒为「归藏之枢」；
-- 任一起点宫位的正推链都会收敛（归位 / 闭环 / 归藏 / 链止），不会死循环。
-
-裁剪后没有了"用神在哪一宫"，正推起点改为**读者点选的宫位**（默认中宫立极）。
-这不是算法改动，只是去掉了用神层。
-
 ## 服务端边界（为 Cloudflare 预留）
 
 - `lib/store/`：卦例存储接口（异步）—— 本地 localStorage / 远端 D1 两种实现。
@@ -151,15 +137,14 @@ npm test
   换浏览器/清 Cookie 会得到新的卦例夹（跨设备需以后接账号）。
 - `lib/readings/`：解卦**事实契约**（客户端只发盘面事实与问句）。
   `app/api/read/route.ts` 是服务端流式代理：prompt 在服务端拼（`route` 同目录 `prompt.ts`），
-  密钥只在服务端 env/secret，未配置时明确返回 501。暂无前端入口，断卦口径待定。
+  密钥只在服务端 env/secret，未配置时明确返回 501。
 - `scripts/check-portability.mjs`：`npm run check:portability` 守住 Workers 兼容性
   （禁 `fs`/`node:*`、`next/image`、`next/font`、锁死 `output: 'export'`）。
 - 目标与约束、后台规划、部署触发条件见 [docs/cloudflare.md](docs/cloudflare.md)。
 
 ## 刻意不做的事
 
-- 不取用神、不判吉凶、不排应期：这些属于规则层，原项目在五层 DAG 里，本仓库不搬。
-- 不接大模型：没有提问 → 意图 → 用神 → prompt 的链路，也没有流式解卦面板。
+- 盘面上不标用神、不印吉凶判词：断语只出现在「解卦」正文里，不压在确定性盘面上。
 - 不为个案写特例：引擎只有查表与确定性算法，没有 `if case_id == ...` 之类的补丁。
 
 ## 起卦随机源（可核查）
@@ -167,7 +152,6 @@ npm test
 起卦的每一次投掷都来自 **Web Crypto**（`crypto.getRandomValues`），不存在 `Math.random`：
 
 - `lib/liuyao/random.ts`：逐位取 Uint32 最低有效位（2^32 可整除 2，天然无偏）；
-  小成图「随机报数」用拒绝采样（拒绝 ≥ 2^32−6 的采样值），同样无模偏差。
 - 环境缺少 Web Crypto 时**直接报错**，不静默回落到 PRNG。
 - `/design` 页会实时跑 2000 掷并显示字/背占比与爻值偏差，可自行核对。
 - 测试（`tests/random.test.ts`）钉三件事：每次投掷都真的调用了 `getRandomValues`、

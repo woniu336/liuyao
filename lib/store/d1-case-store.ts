@@ -38,9 +38,9 @@ export class D1CaseStore implements CaseStore {
     await this.ready();
     const res = await this.db
       .prepare(
-        'SELECT id, kind, created_at, time_input, question, gender, input_json, summary_json, favorite FROM cases WHERE owner_id = ? ORDER BY created_at DESC LIMIT ?',
+        'SELECT id, kind, created_at, time_input, question, gender, input_json, summary_json, favorite FROM cases WHERE owner_id = ? AND kind = ? ORDER BY created_at DESC LIMIT ?',
       )
-      .bind(this.ownerId, MAX_PER_OWNER)
+      .bind(this.ownerId, 'liuyao', MAX_PER_OWNER)
       .all<CaseRow>();
     return (res.results ?? []).map(rowToRecord).filter((r): r is CaseRecord => r !== null);
   }
@@ -49,9 +49,9 @@ export class D1CaseStore implements CaseStore {
     await this.ready();
     const row = await this.db
       .prepare(
-        'SELECT id, kind, created_at, time_input, question, gender, input_json, summary_json, favorite FROM cases WHERE owner_id = ? AND id = ?',
+        'SELECT id, kind, created_at, time_input, question, gender, input_json, summary_json, favorite FROM cases WHERE owner_id = ? AND id = ? AND kind = ?',
       )
-      .bind(this.ownerId, id)
+      .bind(this.ownerId, id, 'liuyao')
       .first<CaseRow>();
     return row ? rowToRecord(row) : null;
   }
@@ -115,7 +115,7 @@ function rowToRecord(row: CaseRow): CaseRecord | null {
     return {
       id: row.id,
       schema: 1,
-      kind: row.kind === 'xct' ? 'xct' : 'liuyao',
+      kind: 'liuyao',
       createdAt: row.created_at,
       timeInput: row.time_input,
       question: row.question,

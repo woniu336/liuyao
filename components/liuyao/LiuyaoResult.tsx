@@ -7,7 +7,7 @@
  *
  * 设计口径（与首页同一套语言：宣纸 + 松墨绿 + 淡金线）：
  *   - 右上角只留「历史排盘」与「截图」，不铺全站导航；
- *   - 底部只留两件事：「重新起卦」与「切换到小成图排盘」（静卦无变，不给切换入口）；
+ *   - 顶部工具条：历史排盘 / 重新起卦 / 截图；底部只放当前动作（解卦 / 停止）；
  *   - 盘面只呈现确定性排盘，不标用神（断语属于解读层，不压在版面上）；
  *   - 不再有「保存」按钮：解卦完成即静默归档进历史排盘，少一个要点的东西。
  */
@@ -27,8 +27,8 @@ export type ReadingPhase = 'idle' | 'streaming' | 'done' | 'error';
 const PRIMARY_BTN =
   'press inline-flex h-12 items-center justify-center rounded-[3px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] px-4 font-song text-[14px] tracking-[0.16em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:opacity-60';
 
-const SECONDARY_BTN =
-  'press inline-flex h-12 shrink-0 items-center justify-center rounded-[3px] border border-[#C3B79E] bg-[#FBF7EC] px-5 font-song text-[14px] tracking-[0.16em] text-[#3F4A42] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]';
+const HEADER_LINK =
+  'font-song text-[11.5px] tracking-[0.05em] text-[#5E5A50] underline-offset-4 transition-colors hover:text-[#8E6337] hover:underline sm:text-[12.5px]';
 
 export default function LiuyaoResult({
   boardProps,
@@ -36,7 +36,6 @@ export default function LiuyaoResult({
   question,
   onReset,
   onSave,
-  onSwitchXct,
 }: {
   boardProps: BoardViewProps;
   facts: LiuyaoReadingFacts;
@@ -44,7 +43,6 @@ export default function LiuyaoResult({
   onReset: () => void;
   /** 解卦完成后的静默归档（历史排盘） */
   onSave: () => Promise<void> | void;
-  onSwitchXct: () => void;
 }) {
   const panelRef = useRef<ReadingPanelHandle | null>(null);
   const shotRef = useRef<HTMLDivElement | null>(null);
@@ -52,8 +50,9 @@ export default function LiuyaoResult({
   const [shooting, setShooting] = useState(false);
   const archivedRef = useRef(false);
 
-  /** 静卦无动爻，小成图无从立变，不给切换入口 */
-  const canSwitchXct = useMemo(() => boardProps.lines.some((l) => l.is_moving), [boardProps.lines]);
+  const streaming = phase === 'streaming';
+  /** 底栏只在「还没解 / 正在解」时出现；读完（或出错）就收起 */
+  const showActionBar = phase === 'idle' || streaming;
 
   // 解卦读完即归档（用户不再需要点「保存」）
   useEffect(() => {
@@ -94,7 +93,7 @@ export default function LiuyaoResult({
   const solar = formatSolarDateDisplay(boardProps.datetime_info.solar_date, boardProps.datetime_info.ganzhi);
 
   return (
-    <div className="relative min-h-screen bg-[#F4F1E8] pb-32 text-[#38423C]">
+    <div className={`relative min-h-screen bg-[#F4F1E8] text-[#38423C] ${showActionBar ? 'pb-28' : 'pb-12'}`}>
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[260px] overflow-hidden opacity-80">
         <InkLandscape />
       </div>
@@ -105,12 +104,12 @@ export default function LiuyaoResult({
         maxWidthClassName="max-w-[720px]"
         actions={
           <>
-            <Link
-              href="/cases"
-              className="font-song text-[12.5px] tracking-[0.06em] text-[#5E5A50] underline-offset-4 transition-colors hover:text-[#8E6337] hover:underline"
-            >
+            <Link href="/cases" className={HEADER_LINK}>
               历史排盘
             </Link>
+            <button type="button" onClick={onReset} className={HEADER_LINK}>
+              重新起卦
+            </button>
             <span aria-hidden className="h-4 w-px bg-[#C8BEA8]" />
             <button
               type="button"
@@ -175,30 +174,24 @@ export default function LiuyaoResult({
 
         {/* 解卦（入口在面板内，底部只留导航动作） */}
         <div className="mt-5">
-          <ReadingPanel ref={panelRef} facts={facts} onPhaseChange={setPhase} />
+          <ReadingPanel ref={panelRef} facts={facts} hideIdleButton onPhaseChange={setPhase} />
         </div>
       </main>
 
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-[#F4F1E8]/95 backdrop-blur-md">
-        <div className="mx-auto w-full max-w-[640px] px-4 pt-2.5 sm:px-6" style={{ borderTop: '1px solid #DDD4BE' }}>
-          <div className="flex items-center gap-2.5">
-            {canSwitchXct ? (
-              <>
-                <button type="button" onClick={onReset} className={SECONDARY_BTN}>
-                  重新起卦
-                </button>
-                <button type="button" onClick={onSwitchXct} className={`${PRIMARY_BTN} flex-1`}>
-                  切换到小成图排盘
-                </button>
-              </>
-            ) : (
-              <button type="button" onClick={onReset} className={`${PRIMARY_BTN} flex-1`}>
-                重新起卦
-              </button>
-            )}
+      {/* 底栏只承载「此刻唯一的动作」：解卦 / 停止；读完之后收起，让页面回到纯阅读 */}
+      {showActionBar && (
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-[#F4F1E8]/95 backdrop-blur-md">
+          <div className="mx-auto w-full max-w-[640px] px-4 pt-2.5 sm:px-6" style={{ borderTop: '1px solid #DDD4BE' }}>
+            <button
+              type="button"
+              onClick={streaming ? () => panelRef.current?.stop() : () => panelRef.current?.start()}
+              className={`${PRIMARY_BTN} w-full`}
+            >
+              {streaming ? '停 止' : '解 卦'}
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

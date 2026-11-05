@@ -247,6 +247,27 @@ textarea::placeholder {
   .hex.stagger .line { animation: none; }
 }
 
+/* 研墨中：一滴墨落纸，涟漪两圈（解卦等待态用） */
+@keyframes ink-ripple {
+  0% { transform: scale(0.55); opacity: 0.55; }
+  70% { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+@keyframes ink-drop {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.25); opacity: 0.55; }
+}
+.ink-ripple {
+  animation: ink-ripple 1.8s ease-out infinite;
+}
+.ink-drop {
+  animation: ink-drop 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ink-ripple { animation: none; opacity: 0; }
+  .ink-drop { animation: none; }
+}
+
 /* 基础按钮（CastWorkbench 依赖 .btn / .btn.primary） */
 .btn {
   font: inherit;

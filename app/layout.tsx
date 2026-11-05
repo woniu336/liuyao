@@ -4,9 +4,9 @@ import AnnouncementBar from '@/components/site/AnnouncementBar';
 import AnalyticsInjector from '@/components/site/AnalyticsInjector';
 
 export const metadata: Metadata = {
-  title: '易林寻踪 | 六爻 · 小成图',
+  title: '易林寻踪 | 六爻排盘',
   description:
-    '三钱摇卦、纳甲排盘与小成图九宫解盘。排盘由确定性引擎计算，解读依盘面事实展开；易学典籍将逐步整理校核。',
+    '三钱摇卦与纳甲排盘，排盘由确定性引擎计算，解读依盘面事实展开；易学典籍将逐步整理校核。',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

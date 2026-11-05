@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 const shelves = [
   { title: '《周易》', subtitle: '六十四卦 · 卦辞 · 爻辞', status: '待校录' },
   { title: '十翼', subtitle: '彖传 · 象传 · 系辞 · 说卦', status: '待校录' },
-  { title: '象数易学', subtitle: '先后天八卦 · 河洛 · 小成图', status: '整理中' },
+  { title: '象数易学', subtitle: '先后天八卦 · 河洛 · 纳甲', status: '整理中' },
   { title: '六爻古籍', subtitle: '卜筮正宗 · 增删卜易 · 古筮真诠', status: '待校录' },
 ];
 

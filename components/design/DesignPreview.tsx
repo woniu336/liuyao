@@ -34,19 +34,6 @@ const SWATCHES = [
   { name: '朱砂', value: '#A8453C', token: 'cinnabar-600' },
 ];
 
-const PALACE_GUA: Record<number, string> = {
-  1: '坎',
-  2: '坤',
-  3: '震',
-  4: '巽',
-  6: '乾',
-  7: '兑',
-  8: '艮',
-  9: '离',
-};
-
-const GRID = [4, 9, 2, 3, 5, 7, 8, 1, 6];
-
 const LINES = [
   { god: '玄武', rel: '父母', najia: '辛未土', role: '世', yang: true, moving: true, ch: '父母 甲子水' },
   { god: '白虎', rel: '兄弟', najia: '辛酉金', role: '应', yang: false, moving: false, ch: '兄弟 甲戌土' },
@@ -57,7 +44,6 @@ export default function DesignPage() {
   const [mode, setMode] = useState<'coin' | 'manual'>('coin');
   const [marital, setMarital] = useState<'unmarried' | 'married'>('unmarried');
   const [dots, setDots] = useState(3);
-  const [activePalace, setActivePalace] = useState(6);
   const [skin, setSkin] = useState<'mist' | 'paper'>('mist');
   const [coins, setCoins] = useState<CoinSide[]>(['字', '背', '字']);
   const [rolling, setRolling] = useState(false);
@@ -205,7 +191,7 @@ export default function DesignPage() {
                 </div>
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-ink-400">
-                婚否只影响小成图的用宫（已婚男坤、已婚女乾；未婚另寻卦），六爻排盘不用它。
+                婚否只作落款记录，不参与排盘计算。
               </p>
             </details>
           </div>
@@ -266,54 +252,11 @@ export default function DesignPage() {
         <div className="min-w-0">
         <div className="hair-t lg:hidden" />
 
-        {/* 九宫 */}
-        <Panel title="小成图" hint="天盘临地盘 · 阖辟往来">
-          <div className="grid grid-cols-3 gap-y-1">
-            {GRID.map((p) => {
-              const isCenter = p === 5;
-              const gua = isCenter ? '艮' : PALACE_GUA[p];
-              const selected = p === activePalace;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setActivePalace(p)}
-                  className="press relative flex aspect-[1.15] flex-col items-center justify-center"
-                >
-                  <span
-                    className={`font-song ${isCenter ? 'text-[16px]' : 'text-[22px]'} leading-none tracking-[0.04em]`}
-                    style={{
-                      color: isCenter ? 'var(--gold-600)' : selected ? 'var(--ink-900)' : 'var(--mist-700)',
-                    }}
-                  >
-                    {gua}
-                  </span>
-                  <span className="mt-1.5 text-[10px] tracking-[0.08em] text-ink-500">
-                    {isCenter ? '归藏' : `${['坎', '坤', '震', '巽', '', '乾', '兑', '艮', '离'][p - 1]}宫`}
-                  </span>
-                  {selected && !isCenter && (
-                    <span
-                      aria-hidden
-                      className="absolute bottom-[6px] h-[2px] w-4"
-                      style={{ background: 'var(--gold-600)' }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2.5 text-[11px] leading-relaxed text-ink-500">
-            用宫选中：字转墨黑 + 底部赭金短线；不用大面积底色，避免"数据表格"感。
-          </p>
-        </Panel>
-
-        <div className="hair-t" />
-
         {/* 解卦 */}
         <Panel title="解卦" hint="四段 · 400–550 字">
           <p className="indent-8 font-song text-[15.5px] leading-[1.95] text-ink-800">
-            所问为丈夫升职，女已婚，主用取乾六宫——乾为夫、为官运、为单位。兼看坤二宫，主文书与任命。
-            中宫归藏艮，止。全图调子先立在一个止字上。
+            所问为丈夫升职，取官鬼为用——官鬼持世而动，得日辰生扶，是事在我手之象。
+            世应之间无冲无合，进神未成，先立在一个「缓」字上。
           </p>
           <p className="mt-3 text-[11.5px] text-ink-500">
             正文用宋体、字号 15.5、行高 1.95；不加粗、不加色块，只有段落与空行。

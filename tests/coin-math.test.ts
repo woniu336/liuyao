@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { coinFacesOf } from '../components/liuyao/CastWorkbench';
 import { coinSidesOf } from '../lib/liuyao/cast-url';
 import { tossLine, tossThree } from '../lib/liuyao/random';
+import { movingLineNumbers, movingPositions } from '../lib/hexagram/hex-math';
 
 /**
  * 三钱法的换算必须与「字=2、背=3」严格一致：
@@ -55,5 +56,17 @@ describe('铜钱换算：字面 2 / 背面 3', () => {
       expect(v).toBeGreaterThanOrEqual(6);
       expect(v).toBeLessThanOrEqual(9);
     }
+  });
+
+  it('动爻爻位是 1-based（自下而上），不再错一位', () => {
+    // 初爻 6（老阴）、三爻 9（老阳）动
+    expect(movingLineNumbers([6, 7, 8, 9, 7, 8])).toEqual([1, 4]);
+    // 全静卦没有动爻
+    expect(movingLineNumbers([7, 8, 7, 8, 7, 8])).toEqual([]);
+    // 上爻动落在第 6 位
+    expect(movingLineNumbers([7, 7, 7, 7, 7, 9])).toEqual([6]);
+    // 与 0-based 版本严格相差 1
+    const values = [9, 6, 7, 8, 9, 6];
+    expect(movingLineNumbers(values)).toEqual(movingPositions(values).map((i) => i + 1));
   });
 });

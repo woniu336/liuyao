@@ -3,7 +3,7 @@
 /**
  * 全站页头
  * =========
- * 左：篆印 + 站名「易林寻踪」；右：六爻 / 小成图 / 古籍 三入口。
+ * 左：篆印 + 站名「易林寻踪」；右：六爻 / 古籍 / 历史排盘 三入口。
  * 页面特有的动作（历史排盘、截图、保存卦例…）通过 `actions` 插到导航右侧，
  * 保证「同一块牌子」出现在所有页面，而不用各页各写一套 header。
  */
@@ -11,12 +11,12 @@
 import React from 'react';
 import Link from 'next/link';
 
-export type SiteSection = 'liuyao' | 'xct' | 'classics';
+export type SiteSection = 'liuyao' | 'classics' | 'history';
 
 const NAV: { id: SiteSection; label: string; href: string }[] = [
   { id: 'liuyao', label: '六爻', href: '/' },
-  { id: 'xct', label: '小成图', href: '/xct' },
   { id: 'classics', label: '古籍', href: '/classics' },
+  { id: 'history', label: '历史排盘', href: '/cases' },
 ];
 
 export interface SiteHeaderProps {

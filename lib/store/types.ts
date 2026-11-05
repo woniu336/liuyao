@@ -10,10 +10,9 @@
  *   3. 记录带 schema 版本，读取时逐版迁移，绝不因字段变化丢历史。
  */
 
-export type CaseKind = 'liuyao' | 'xct';
+export type CaseKind = 'liuyao';
 
 export type LiuyaoMethod = 'coin' | 'yarrow' | 'manual';
-export type XctMethod = 'four' | 'time' | 'self';
 
 export interface LiuyaoCaseInput {
   kind: 'liuyao';
@@ -24,28 +23,13 @@ export interface LiuyaoCaseInput {
   gender: '男' | '女';
 }
 
-export interface XctManual {
-  benUpper: string;
-  benLower: string;
-  zhiUpper: string;
-  zhiLower: string;
-}
-
-export interface XctCaseInput {
-  kind: 'xct';
-  method: XctMethod;
-  tianDiNums?: [string, string, string, string];
-  timeDate?: string;
-  manual?: XctManual;
-}
-
-export type CaseInput = LiuyaoCaseInput | XctCaseInput;
+export type CaseInput = LiuyaoCaseInput;
 
 /** 列表展示用快照（不作为事实来源） */
 export interface CaseSummary {
   /** 本卦 / 本图 */
   primary: string;
-  /** 变卦（六爻）或 中宫归藏（小成图） */
+  /** 变卦（静卦为空） */
   changed?: string | null;
   /** 结构标签：六冲/归魂/… */
   tags?: string[];

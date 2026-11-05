@@ -63,6 +63,15 @@ export const movingPositions = (values: number[]): number[] =>
   values.flatMap((v, i) => (LINE_VALUES[v]?.moving ? [i] : []));
 
 /**
+ * 动爻爻位 (1-based，自下而上)：界面文案一律用这个。
+ *
+ * 踩过的坑：`movingPositions` 是 0-based 投掷序，直接拿去查「初/二/三…」
+ * 会整体错一位（初爻动查不到，二爻动显示成初爻）。
+ */
+export const movingLineNumbers = (values: number[]): number[] =>
+  movingPositions(values).map((i) => i + 1);
+
+/**
  * 拆解掩码各位为爻序与阴阳对象
  */
 export function bitsOfMask(mask: number, n = 6): Array<{ pos: number; yang: boolean }> {

@@ -12,7 +12,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Clock3, PenLine } from 'lucide-react';
 import { Coin, type CoinSide } from '@/components/liuyao/Coin';
 import GuaCombobox from './GuaCombobox';
@@ -21,7 +20,7 @@ import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
 import { tossStats, tossThree } from '@/lib/liuyao/random';
 import { encodeCastState } from '@/lib/liuyao/cast-url';
 import { castTimeInfo, nowTimeInput, parseTimeInput } from '@/lib/liuyao/ganzhi';
-import { masksOf, movingPositions } from '@/lib/hexagram/hex-math';
+import { masksOf, movingLineNumbers } from '@/lib/hexagram/hex-math';
 import type { CoinResult } from '@/components/liuyao/types';
 import { SIXTY_FOUR_HEXAGRAMS } from '@/lib/liuyao/najia';
 import InkLandscape from '@/components/site/InkLandscape';
@@ -93,7 +92,7 @@ export default function CastPage() {
   const complete = castCount === 6;
   const last = castCount ? values[castCount - 1] : null;
   const { primary, moving: movingMask } = masksOf(values);
-  const movingList = movingPositions(values);
+  const movingList = movingLineNumbers(values);
   const baseName = complete
     ? SIXTY_FOUR_HEXAGRAMS[values.map((v) => (v === 7 || v === 9 ? '1' : '0')).join('')]?.name
     : null;
@@ -162,7 +161,7 @@ export default function CastPage() {
     if (autoTime) setTimeInput(nowTimeInput());
   };
 
-  const go = (target: 'liuyao' | 'xct') => {
+  const go = () => {
     const qs = encodeCastState({
       coins: values,
       timeInput: autoTime ? nowTimeInput() : timeInput,
@@ -170,7 +169,7 @@ export default function CastPage() {
       marital,
       question,
     });
-    router.push(`/${target}?${qs}`);
+    router.push(`/liuyao?${qs}`);
   };
 
   const titleName = complete
@@ -178,20 +177,9 @@ export default function CastPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#F4F1E8] text-[#38423C]">
-      {/* 顶部导航：易林寻踪 · 六爻 / 小成图 / 古籍 */}
-      <SiteHeader
-        active="liuyao"
-        maxWidthClassName="max-w-[1200px]"
-        actions={
-          <Link
-            href="/cases"
-            className="font-song text-[12px] tracking-[0.06em] text-[#5E5A50] underline-offset-4 transition-colors hover:text-[#8E6337] hover:underline sm:text-[13px]"
-          >
-            历史排盘
-          </Link>
-        }
-      />
+    <div className="min-h-screen bg-[#F4F1E8] pb-24 text-[#38423C] sm:pb-0">
+      {/* 顶部导航：易林寻踪 · 六爻 / 古籍 / 历史排盘 */}
+      <SiteHeader active="liuyao" maxWidthClassName="max-w-[1200px]" />
 
       {/* 山水题签 */}
       <section className="relative isolate overflow-hidden">
@@ -332,8 +320,9 @@ export default function CastPage() {
               ))}
             </div>
 
-            <div className="mx-auto flex max-w-[520px] items-center justify-between px-3">
-              <div className="flex items-center gap-[9px]">
+            <div className="mx-auto flex max-w-[520px] items-center justify-between gap-3 px-3">
+              <div className="flex min-w-0 items-center gap-3">
+              <div className="flex shrink-0 items-center gap-[9px]">
                 {Array.from({ length: 6 }, (_, i) => {
                   const v = values[i];
                   const yang = v === 7 || v === 9;
@@ -346,9 +335,18 @@ export default function CastPage() {
                   );
                 })}
               </div>
-              <span className="font-song text-[12px] tracking-[0.04em] text-[#577365]">
+              <span className="truncate font-song text-[12px] tracking-[0.04em] text-[#577365]">
                 {last ? `${POS_NAMES[castCount - 1]}　${lineDescription(last)}` : '尚未掷钱'}
               </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSheet('manual')}
+                className="press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[3px] border border-[#9C7A48] bg-[#FBF7EC] px-3 font-song text-[12px] tracking-[0.08em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
+              >
+                <PenLine size={13} strokeWidth={1.7} />
+                手动指定
+              </button>
             </div>
 
             {/* 爻象生成台：移到钱下方 */}
@@ -356,7 +354,7 @@ export default function CastPage() {
               <div className="mb-2 flex items-center justify-center gap-3 font-song text-[12.5px] tracking-[0.28em] text-[#575A50]">
                 <span className="h-px w-6 bg-[#B89C6C]/65" />卦 象<span className="h-px w-6 bg-[#B89C6C]/65" />
               </div>
-              <div className="relative flex justify-center py-2">
+              <div className="flex justify-center py-2">
               <div className="flex w-[190px] flex-col gap-[8px] sm:w-[230px]">
                 {Array.from({ length: 6 }, (_, idx) => {
                   const pos = 6 - idx;
@@ -380,22 +378,14 @@ export default function CastPage() {
                   );
                 })}
               </div>
-              <button
-                type="button"
-                onClick={() => setSheet('manual')}
-                className="press absolute right-0 top-1/2 inline-flex h-9 -translate-y-1/2 items-center gap-1.5 rounded-[3px] border border-[#9C7A48] bg-[#FBF7EC] px-3 font-song text-[12px] tracking-[0.08em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
-              >
-                <PenLine size={13} strokeWidth={1.7} />
-                手动指定
-              </button>
               </div>
               <p className="mt-1 text-center font-kai text-[11.5px] tracking-[0.1em] text-[#928774]">
                 自初爻起，自下而上{movingList.length ? `　·　动 ${movingList.map((p) => POS_NAMES[p - 1]).join('、')}` : ''}
               </p>
             </div>
 
-            {/* 墨绿漆面 + 赭金双边按钮 */}
-            <div className="mx-auto mt-5 max-w-[300px] rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_7px_rgba(96,76,43,0.16)]">
+            {/* 墨绿漆面 + 赭金双边按钮（移动端改由底部悬浮条承载） */}
+            <div className="mx-auto mt-5 hidden max-w-[300px] rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_7px_rgba(96,76,43,0.16)] sm:block">
               <button type="button" disabled={rolling || complete} onClick={doToss} className="press h-[50px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[17px] font-medium tracking-[0.4em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60">
                 {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
               </button>
@@ -440,36 +430,46 @@ export default function CastPage() {
         </div>
       )}
 
-      {/* 卦成选择：静卦不立小成图（无动爻则小成图无从推演），只走六爻 */}
+      {/* 移动端：起卦按钮悬浮在底部，单手可及 */}
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-[#D7CDB8] bg-[#F6F2E9]/95 px-4 pt-2.5 backdrop-blur-md sm:hidden">
+        <div className="mx-auto max-w-[420px] rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_10px_rgba(96,76,43,0.18)]">
+          <button
+            type="button"
+            disabled={rolling || complete}
+            onClick={doToss}
+            className="press h-[48px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[16px] font-medium tracking-[0.36em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
+          </button>
+        </div>
+      </div>
+
+      {/* 卦成：直接进六爻排盘 */}
       {sheet === 'choose' && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink-900/30 px-3 backdrop-blur-[2px] sm:px-5" onClick={() => setSheet('none')}>
-          <div className="w-full max-w-[520px] border border-[#CDBB96] bg-[#FCF8EF] px-5 pb-6 pt-5 shadow-[0_18px_50px_rgba(53,45,31,0.22)]" style={{ borderRadius: 10 }} onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-[440px] border border-[#CDBB96] bg-[#FCF8EF] px-5 pb-6 pt-5 shadow-[0_18px_50px_rgba(53,45,31,0.22)]" style={{ borderRadius: 10 }} onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p className="font-kai text-[10.5px] tracking-[0.18em] text-[#9A805A]">卦象已成</p>
                 <h3 className="mt-1 font-song text-[20px] font-semibold tracking-[0.1em] text-ink-900">{baseName ?? '六爻已备'}</h3>
                 <p className="mt-1 text-[11.5px] text-ink-600">
-                  {movingList.length ? `动爻 ${movingList.map((p) => POS_NAMES[p - 1]).join('、')}` : '六爻安静 · 静卦（无动爻，小成图无以立变）'}
+                  {movingList.length ? `动爻 ${movingList.map((p) => POS_NAMES[p - 1]).join('、')}` : '六爻安静 · 静卦'}
                 </p>
               </div>
               <button type="button" onClick={reset} className="press shrink-0 font-song text-[11.5px] text-ink-500 underline-offset-4 hover:underline">重起</button>
             </div>
-            {movingList.length ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Button variant="line" size="lg" className="min-h-[52px] flex-col !gap-0.5 border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] !text-[#F5E9CB] hover:border-[#9C7A48] hover:!text-[#F5E9CB]" onClick={() => go('liuyao')}>
-                  <span>六爻解卦</span><span className="text-[10.5px] font-normal opacity-70">纳甲 · 世应 · 六亲</span>
-                </Button>
-                <Button variant="line" size="lg" onClick={() => go('xct')} className="min-h-[52px] flex-col !gap-0.5">
-                  <span>小成图解盘</span><span className="text-[10.5px] font-normal opacity-70">用宫 · 九宫 · 正推</span>
-                </Button>
-              </div>
-            ) : (
-              <Button variant="line" size="lg" className="min-h-[52px] flex-col !gap-0.5 border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] !text-[#F5E9CB] hover:border-[#9C7A48] hover:!text-[#F5E9CB]" block onClick={() => go('liuyao')}>
-                <span>六爻解卦</span><span className="text-[10.5px] font-normal opacity-70">纳甲 · 世应 · 六亲</span>
-              </Button>
-            )}
+            <Button
+              variant="line"
+              size="lg"
+              block
+              className="min-h-[52px] flex-col !gap-0.5 border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] !text-[#F5E9CB] hover:border-[#9C7A48] hover:!text-[#F5E9CB]"
+              onClick={go}
+            >
+              <span>排盘解卦</span>
+              <span className="text-[10.5px] font-normal opacity-70">纳甲 · 世应 · 六亲</span>
+            </Button>
             <p className="mt-3 text-center font-kai text-[11px] tracking-[0.06em] text-[#938873]">
-              {movingList.length ? '两种法门各有视角 · 进入后仍可切换' : '静卦以本卦象断，不另立变盘'}
+              {movingList.length ? '卦已成，动爻已标于盘面' : '静卦以本卦象断，不另立变盘'}
             </p>
           </div>
         </div>

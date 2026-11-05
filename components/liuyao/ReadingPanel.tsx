@@ -5,12 +5,13 @@
  * ==================
  * - 只在六爻盘面下方出现一个「解 卦」入口，默认不占版面；
  * - 点击后把**盘面事实**发到服务端（密钥只在服务端），流式接收，逐字落下；
+ * - 四段口径：取用 / 盘面 / 走势 / 应期（prompt 在 app/api/read/prompt.ts）；
  * - 排版取「纸上批注」：窄栏、宽行距、竖排小标、朱砂光标，不写报告体；
  * - 事实抽屉：可以看见到底发送了什么（不含任何密钥）。
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { LiuyaoReadingFacts } from '@/lib/readings/types';
+import type { ReadingFacts } from '@/lib/readings/types';
 
 type Phase = 'idle' | 'streaming' | 'done' | 'error';
 
@@ -88,7 +89,8 @@ export interface ReadingPanelHandle {
 }
 
 export interface ReadingPanelProps {
-  facts: LiuyaoReadingFacts;
+  /** 六爻盘面事实（kind='liuyao'） */
+  facts: ReadingFacts;
   /** 正文增量回调（用于解析用神、底部按钮状态） */
   onTextChange?: (text: string) => void;
   onPhaseChange?: (phase: Phase) => void;
@@ -106,6 +108,7 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
   const [showFacts, setShowFacts] = useState(false);
   const [copied, setCopied] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const stickRef = useRef(true);
   const startedAtRef = useRef(0);
@@ -154,6 +157,8 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
     setPhase('streaming');
     setText('');
     setError('');
+    // 起解即把「解卦位置」带到视野里（移动端底部有固定动作条，留一点上边距）
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     try {
       const res = await fetch('/api/read', {
@@ -257,17 +262,21 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
   }
 
   return (
-    <section className="mt-7">
+    <section ref={sectionRef} className="mt-7 scroll-mt-20">
       <div className="relative mx-auto max-w-[680px]">
         {phase === 'streaming' && !text && (
-          <div className="flex items-center gap-2 py-6 font-serif text-[12px] text-[#9C907F]">
-            <span className="inline-flex gap-1">
-              <i className="h-1 w-1 animate-pulse rounded-full bg-[#B08A5E]" />
-              <i className="h-1 w-1 animate-pulse rounded-full bg-[#B08A5E] [animation-delay:180ms]" />
-              <i className="h-1 w-1 animate-pulse rounded-full bg-[#B08A5E] [animation-delay:360ms]" />
+          <div className="flex flex-col items-center gap-3 py-9">
+            <span className="relative flex h-9 w-9 items-center justify-center" aria-hidden>
+              <span className="ink-ripple absolute inset-0 rounded-full border border-[#B08A5E]/60" />
+              <span className="ink-ripple absolute inset-0 rounded-full border border-[#B08A5E]/40 [animation-delay:900ms]" />
+              <span className="ink-drop h-2.5 w-2.5 rounded-full bg-[#8E6337]" />
             </span>
-            研墨中{elapsed >= 3 ? ` · ${elapsed}s` : ''}
-            {elapsed >= 20 && <span className="text-[10.5px] text-[#A79C8A]">（思考模式首字较慢）</span>}
+            <p className="font-song text-[12.5px] tracking-[0.22em] text-[#8A7A60]">
+              研墨中{elapsed >= 2 ? ` · ${elapsed}s` : ''}
+            </p>
+            <p className="font-kai text-[11px] tracking-[0.06em] text-[#A79C8A]">
+              {elapsed >= 20 ? '正在依盘面事实推演，思考模式首字稍慢' : '依盘面事实起卦辞，请稍候'}
+            </p>
           </div>
         )}
 
