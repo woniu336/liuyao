@@ -1,0 +1,73 @@
+# liuyao · 六爻 / 小成图 确定性排盘
+
+从 [bazi-web](https://github.com/woniu336/bazi-web) 抽出并裁剪的两个排盘工具，单进程跑：
+
+| 工具 | 保留 | 移除 |
+| --- | --- | --- |
+| **六爻**（`/liuyao`） | 三钱摇卦 / 大衍筮法 / 手工录入 → 纳甲装卦、安世应、定六亲、旬空、伏神、六神、月卦身、天医文昌等神煞 | 问句意图引擎、用神取舍、五层 DAG、生克旺衰、应期、大模型解卦 |
+| **小成图**（`/xct`） | 天地数 / 梅花时间 / 自定选卦 → 八宫天盘、中宫归藏、九宫四象八断、正推气路、盘面详录 | 问句输入、类象用神、LLM 意图识别、专事公理库、LLM 解盘 |
+
+两个工具都只输出**可核查的排盘事实**：卦象由投掷与时间决定，不由解释决定。
+六爻页的问句只原样写在盘面顶部（便于留档/复制），**不参与任何计算**。
+
+## 跑起来
+
+```bash
+npm install
+npm run dev          # 前台：http://localhost:3000
+npm run dev:bg       # 后台：日志写 logs/dev.out.log，按端口重启旧进程
+npm test             # 引擎自证 + 差分对齐（见下）
+```
+
+手机用局域网 IP 打开时，`next.config.ts` 会把本机所有非回环 IPv4 放进
+`allowedDevOrigins`。否则 Next 16 会拦掉 `/_next/static/chunks/*.js`，
+页面看着完整、按钮全部不动（React 没 hydration）。
+
+## 目录
+
+```
+app/                    首页 / 六爻页 / 小成图页
+components/liuyao/      六爻：LiuyaoView（起卦表单）· CastWorkbench（三钱/大衍）· ManualCast · ChartBoard（盘面）
+components/xct/         小成图：XiaoChengTuView · NinePalaceBoard · HexagramFigure · ZhengTuiPathView · VerdictCard · ReportView
+lib/liuyao/najia.ts     六爻确定性排盘引擎（core.py 的逐条移植）
+lib/liuyao/ganzhi.ts    起卦时刻 → 四柱干支
+lib/xct/                小成图引擎（boardBuilder / judgeEngine / dagTracker / constants / guizang）
+lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
+tests/                  差分基准与引擎自证
+```
+
+## 六爻引擎的验证方式
+
+`lib/liuyao/najia.ts` 是对 bazi-web `src/engine/core.py::HexagramEngine` 的逐条移植。
+为了不靠"看起来对"，用原引擎生成差分基准再逐案比对：
+
+```bash
+# 基准已提交在 tests/fixtures/python-baseline.json（4696 案，SHA-256 指纹）
+python tests/generate_python_baseline.py   # 需要 bazi-web 在同级目录；仅重建基准时用
+npm test
+```
+
+- 4096 种三钱投掷组合（固定丙午年 / 申月 / 己丑日 / 申时）
+- 600 组随机年/月/日/时 + 投掷（覆盖十神起例、神煞、旬空全干支）
+- 比对字段：本卦/变卦名、动爻、旬空、月卦身、驿马桃花禄神贵人、
+  六爻的纳甲/六亲/世应/六神/伏神（含飞伏生克描述）/动爻变出
+
+新增的「天医（月建前一位）」「文昌（依日干）」不参与差分（原 core.py 没有），
+由 `tests/liuyao-engine.test.ts` 单独断言。
+
+## 小成图引擎
+
+`lib/xct/` 与 bazi-web 同源，未改算法。`tests/xct-engine.test.ts` 遍历
+64×64 种本卦/之卦组合 × 9 宫，断言：
+
+- 八方断语必落在四象八断集合内，中宫恒为「归藏之枢」；
+- 任一起点宫位的正推链都会收敛（归位 / 闭环 / 归藏 / 链止），不会死循环。
+
+裁剪后没有了"用神在哪一宫"，正推起点改为**读者点选的宫位**（默认中宫立极）。
+这不是算法改动，只是去掉了用神层。
+
+## 刻意不做的事
+
+- 不取用神、不判吉凶、不排应期：这些属于规则层，原项目在五层 DAG 里，本仓库不搬。
+- 不接大模型：没有提问 → 意图 → 用神 → prompt 的链路，也没有流式解卦面板。
+- 不为个案写特例：引擎只有查表与确定性算法，没有 `if case_id == ...` 之类的补丁。

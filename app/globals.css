@@ -1,0 +1,210 @@
+@import "tailwindcss";
+@import "lxgw-wenkai-webfont/lxgwwenkai-regular.css";
+@import "@fontsource/ma-shan-zheng";
+
+/* ==========================================================================
+   宣纸米白 / 暖墨字 / 朱砂强调 —— 与 bazi-web 同一套版式语汇的裁剪版。
+   只保留三块用得到的东西：设计令牌、矢量爻象、铜钱翻滚动画。
+   ========================================================================== */
+
+@theme inline {
+  --font-serif-cn: "LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "Songti SC", serif;
+  --font-title-art: "Ma Shan Zheng", "LXGW WenKai", "Kaiti SC", "KaiTi", serif;
+
+  --color-paper: #f7f3ea;
+  --color-paper-card: #fffdf8;
+  --color-ink: #22201b;
+  --color-ink-soft: #5e5a50;
+  --color-cinnabar: #8e3a2c;
+  --color-gold: #9c7a3c;
+}
+
+:root {
+  --bg: #f7f3ea;
+  --surface: #fffdf8;
+  --ink: #17140f;
+  --muted: #5c5449;
+  --faint: #8c8272;
+  --line: #e0d8c9;
+  --accent: #a5342b;
+  --accent-soft: #f2e3dc;
+
+  /* HexagramSvg 依赖的别名 */
+  --yi-bg: var(--bg);
+  --yi-surface: var(--surface);
+  --yi-ink: var(--ink);
+  --yi-muted: var(--muted);
+  --yi-faint: var(--faint);
+  --yi-line: var(--line);
+  --yi-accent: var(--accent);
+  --yi-accent-soft: var(--accent-soft);
+
+  --serif: "LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "Songti SC", serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-serif,
+.font-serif-cn {
+  font-family: var(--serif);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7a7264;
+  opacity: 1;
+  font-size: 15px;
+}
+
+/* 铜钱翻滚：CastWorkbench 的三枚铜钱用 */
+@keyframes coin-roll-0 {
+  0% { transform: translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1); }
+  35% { transform: translateY(-46px) rotateX(450deg) rotateY(540deg) rotateZ(-15deg) scale(1.08); }
+  68% { transform: translateY(4px) rotateX(720deg) rotateY(900deg) rotateZ(8deg) scale(0.98); }
+  85% { transform: translateY(-8px) rotateX(900deg) rotateY(1080deg) rotateZ(-6deg) scale(1.02); }
+  100% { transform: translateY(0) rotateX(1080deg) rotateY(1080deg) rotateZ(-10deg) scale(1); }
+}
+
+@keyframes coin-roll-1 {
+  0% { transform: translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1); }
+  35% { transform: translateY(-58px) rotateX(540deg) rotateY(720deg) rotateZ(18deg) scale(1.1); }
+  68% { transform: translateY(5px) rotateX(900deg) rotateY(1080deg) rotateZ(-8deg) scale(0.97); }
+  85% { transform: translateY(-10px) rotateX(1080deg) rotateY(1260deg) rotateZ(6deg) scale(1.02); }
+  100% { transform: translateY(0) rotateX(1260deg) rotateY(1440deg) rotateZ(4deg) scale(1); }
+}
+
+@keyframes coin-roll-2 {
+  0% { transform: translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1); }
+  35% { transform: translateY(-48px) rotateX(400deg) rotateY(600deg) rotateZ(-22deg) scale(1.07); }
+  68% { transform: translateY(4px) rotateX(700deg) rotateY(960deg) rotateZ(12deg) scale(0.98); }
+  85% { transform: translateY(-7px) rotateX(860deg) rotateY(1140deg) rotateZ(-4deg) scale(1.01); }
+  100% { transform: translateY(0) rotateX(1000deg) rotateY(1260deg) rotateZ(14deg) scale(1); }
+}
+
+.coin-physical-roll-0 { animation: coin-roll-0 1100ms cubic-bezier(.25, .8, .25, 1) both; transform-style: preserve-3d; will-change: transform; }
+.coin-physical-roll-1 { animation: coin-roll-1 1100ms cubic-bezier(.25, .8, .25, 1) both; transform-style: preserve-3d; will-change: transform; }
+.coin-physical-roll-2 { animation: coin-roll-2 1100ms cubic-bezier(.25, .8, .25, 1) both; transform-style: preserve-3d; will-change: transform; }
+
+/* 矢量爻象 */
+@keyframes yi-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes yi-line {
+  0% { opacity: 0; transform: scaleX(0.2); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+.hexwrap {
+  line-height: 0;
+  display: inline-block;
+}
+
+.hex {
+  display: block;
+  overflow: visible;
+}
+
+.hex .line rect {
+  fill: var(--yi-ink);
+  transition: fill 0.35s ease;
+}
+
+.hex .line.moving rect {
+  fill: var(--yi-accent);
+}
+
+.hex .line.pending .ph {
+  fill: var(--yi-line);
+}
+
+.hex .mark {
+  fill: var(--yi-accent);
+  animation: 2.4s ease-in-out infinite yi-pulse;
+}
+
+.hex .line {
+  transform-box: fill-box;
+  transform-origin: 50%;
+}
+
+.hex.stagger .line {
+  animation: 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) both yi-line;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hex .mark { opacity: 1; animation: none; }
+  .hex.stagger .line { animation: none; }
+}
+
+/* 一横 / 两短横的吉凶形制（小成图九宫用） */
+.verdict-mark {
+  display: inline-flex;
+  width: 9px;
+  gap: 2px;
+  height: 2px;
+  flex-shrink: 0;
+}
+.verdict-mark span {
+  height: 2px;
+  flex: 1;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* 基础按钮（CastWorkbench 依赖 .btn / .btn.primary） */
+.btn {
+  font: inherit;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  white-space: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 24px;
+  font-size: 15px;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  box-sizing: border-box;
+}
+
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fffdf8;
+}
+
+.btn.primary:hover { background: #8d2a22; border-color: #8d2a22; color: #fffdf8; }
+
+.btn:disabled,
+.btn[aria-disabled='true'] { opacity: 0.45; cursor: default; }
+
+.btn.primary:disabled,
+.btn.primary[aria-disabled='true'] {
+  opacity: 1;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+.btn.sm { padding: 9px 16px; font-size: 13.5px; }
+.btn.block { width: 100%; }

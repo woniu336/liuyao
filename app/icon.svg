@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#f7f3ea"/>
+  <rect x="7" y="7" width="50" height="50" rx="3" fill="none" stroke="#8e3a2c" stroke-width="2"/>
+  <text x="32" y="43" text-anchor="middle" font-size="30" font-family="KaiTi, STKaiti, serif" fill="#8e3a2c">易</text>
+</svg>
