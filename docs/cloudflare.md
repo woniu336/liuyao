@@ -164,3 +164,26 @@ npm run dev               # http://localhost:3000/admin
 - 卦例从 localStorage 迁 D1（M3，需要 owner 标识）。
 - Cloudflare Access、真实 secret 注入方式、`vinext-cloudflare deploy`。
 - 登录限流的边缘化（Rate Limiting / KV）。
+
+## 九、M3（一）：前台公告条与统计注入（已完成）
+
+页面保持静态，配置在客户端拉取：
+
+- `GET /api/site-config`：公告（生效中才返回）+ 统计公开字段；`s-maxage=60`，失败返回空配置。
+- `components/site/AnnouncementBar.tsx`：全站顶部条（info/warn/danger 三档），
+  「关闭」按 `updatedAt` 记在 localStorage——同一条不再打扰，后台更新后重新出现。
+- `components/site/AnalyticsInjector.tsx`：按结构化配置运行时插入 `<script>`，带
+  `data-liuyao-analytics` 标记防重复；只认白名单 provider 与 https 地址，缺字段一律不注入。
+- `lib/site/site-config.ts`：纯函数（`publicSiteConfig` / `analyticsScript`），已覆盖单测。
+
+验证（workerd + 本地 D1）：
+
+1. 后台启用公告 → 前台刷新出现；点关闭 → 刷新仍隐藏；后台再次保存（updatedAt 变化）→ 重新出现。
+2. 统计切 Cloudflare + token → 页面注入 `beacon.min.js` 且 `data-cf-beacon={"token":"..."}`；
+   关闭统计 → 刷新不再注入。
+3. 全程 0 console error；`npm run check`（48 测试）与两套 build 通过。
+
+注意：
+- 配置最多 60s 生效（接口缓存）；后台改完想立刻看，可刷新两次或等一分钟。
+- 公告/统计都是「失败静默」：接口挂了只影响它们自己，排盘照常。
+- 统计 token 本身就是公开信息（会出现在页面源码里），不是密钥。

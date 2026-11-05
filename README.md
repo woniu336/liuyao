@@ -48,6 +48,14 @@ lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
 tests/                  差分基准与引擎自证
 ```
 
+## 公告与统计
+
+页面仍是静态的，公告与统计配置由 `/api/site-config` 在客户端拉取：
+
+- 公告条：后台启用后全站顶部出现，可按 `updatedAt` 关闭；接口失败不显示，不影响排盘。
+- 统计：只接受结构化配置（Cloudflare Web Analytics / Umami / Plausible），运行时注入
+  `<script>`；不接任意 JS snippet。
+
 ## 后台（`/admin`）
 
 公告 · LLM 切换 · 流量统计配置 · 审计。数据存 D1（本地用 miniflare），
