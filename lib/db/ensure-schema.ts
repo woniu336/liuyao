@@ -12,7 +12,15 @@ const ensured = new WeakSet<object>();
 export async function ensureD1Schema(db: D1Like): Promise<void> {
   if (ensured.has(db as unknown as object)) return;
   for (const statement of SCHEMA_STATEMENTS) {
-    await db.prepare(statement).run();
+    try {
+      await db.prepare(statement).run();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      // SQLite 没有 ADD COLUMN IF NOT EXISTS：迁移里的 ALTER 在已有库上会报重复列，
+      // 这属于「已经加过了」，跳过即可。
+      if (/duplicate column name/i.test(message)) continue;
+      throw e;
+    }
   }
   ensured.add(db as unknown as object);
 }

@@ -8,6 +8,8 @@ import type {
   AnnouncementLevel,
   AnnouncementSettings,
   LlmProfile,
+  ReasoningEffort,
+  ThinkingMode,
 } from '../types';
 
 export class AdminValidationError extends Error {}
@@ -110,12 +112,21 @@ export function parseProfile(input: unknown): LlmProfile {
   }
 
   const sortRaw = Number(o.sort ?? 0);
+  const thinking: ThinkingMode =
+    o.thinking === 'enabled' || o.thinking === 'disabled' ? o.thinking : 'default';
+  const reasoningEffort =
+    o.reasoningEffort === 'low' || o.reasoningEffort === 'high' || o.reasoningEffort === 'max'
+      ? (o.reasoningEffort as ReasoningEffort)
+      : undefined;
+
   return {
     id,
     label,
     baseUrl: baseUrl.replace(/\/+$/, ''),
     model,
     keyEnv,
+    thinking,
+    ...(reasoningEffort ? { reasoningEffort } : {}),
     enabled: o.enabled !== false,
     sort: Number.isFinite(sortRaw) ? Math.max(0, Math.min(999, Math.trunc(sortRaw))) : 0,
     updatedAt: new Date().toISOString(),

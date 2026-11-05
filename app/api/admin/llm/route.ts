@@ -3,6 +3,7 @@ import { requireAdmin, sameOrigin } from '@/lib/admin/server/auth';
 import { adminError, adminJson, readJsonBody } from '@/lib/admin/server/http';
 import { parseProfile } from '@/lib/admin/server/validate';
 import { SETTING_LLM_ACTIVE, type LlmProfile } from '@/lib/admin/types';
+import { buildChatRequestBody } from '@/lib/readings/llm-request';
 
 /**
  * LLM 配置管理（受保护）。
@@ -75,12 +76,17 @@ export async function POST(req: Request) {
         const upstream = await fetch(`${target.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-          body: JSON.stringify({
-            model: target.model,
-            temperature: 0,
-            max_tokens: 8,
-            messages: [{ role: 'user', content: 'ping' }],
-          }),
+          body: JSON.stringify(
+            buildChatRequestBody({
+              model: target.model,
+              stream: false,
+              temperature: 0,
+              maxTokens: 256,
+              thinking: (target as LlmProfile).thinking,
+              reasoningEffort: (target as LlmProfile).reasoningEffort,
+              messages: [{ role: 'user', content: 'ping' }],
+            }),
+          ),
           signal: AbortSignal.timeout(15_000),
         });
         const text = await upstream.text();

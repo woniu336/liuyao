@@ -9,6 +9,8 @@ interface ProfileRow {
   base_url: string;
   model: string;
   key_env: string;
+  thinking?: string | null;
+  reasoning_effort?: string | null;
   enabled: number;
   sort: number;
   updated_at: string;
@@ -71,11 +73,13 @@ export class D1AdminStore implements AdminStore {
     await this.ready();
     await this.db
       .prepare(
-        `INSERT INTO llm_profiles (id, label, base_url, model, key_env, enabled, sort, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO llm_profiles (id, label, base_url, model, key_env, thinking, reasoning_effort, enabled, sort, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            label = excluded.label, base_url = excluded.base_url, model = excluded.model,
-           key_env = excluded.key_env, enabled = excluded.enabled, sort = excluded.sort,
+           key_env = excluded.key_env, thinking = excluded.thinking,
+           reasoning_effort = excluded.reasoning_effort,
+           enabled = excluded.enabled, sort = excluded.sort,
            updated_at = excluded.updated_at`,
       )
       .bind(
@@ -84,6 +88,8 @@ export class D1AdminStore implements AdminStore {
         profile.baseUrl,
         profile.model,
         profile.keyEnv,
+        profile.thinking ?? 'default',
+        profile.reasoningEffort ?? null,
         profile.enabled ? 1 : 0,
         profile.sort,
         profile.updatedAt,
@@ -130,6 +136,13 @@ function rowToProfile(row: ProfileRow): LlmProfile {
     baseUrl: row.base_url,
     model: row.model,
     keyEnv: row.key_env,
+    thinking:
+      row.thinking === 'enabled' || row.thinking === 'disabled'
+        ? row.thinking
+        : 'default',
+    ...(row.reasoning_effort === 'low' || row.reasoning_effort === 'high' || row.reasoning_effort === 'max'
+      ? { reasoningEffort: row.reasoning_effort }
+      : {}),
     enabled: Boolean(row.enabled),
     sort: row.sort,
     updatedAt: row.updated_at,

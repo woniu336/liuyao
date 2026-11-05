@@ -280,3 +280,40 @@ npm run dev               # http://localhost:3000/admin
 - mock 上游端到端：四段标题正确、5 段正文、事实抽屉含卦辞与十三神煞且无密钥泄漏、
   复制可用、桌面/390px 均无横向溢出、0 console error。
 - 64 项测试通过（新增 prompt 精简断言 6 项：不重排盘、无病占专项/自检、神煞同源、用九用六等）。
+
+## 十二、DeepSeek Flash + 思考模式（已完成接入）
+
+### 本地密钥
+
+- 真实 key 只放在项目根目录的 `.llm.local`（已 gitignore，**不进仓库、不进 D1**）。
+- `scripts/load-secrets.mjs` 在启动前把 `.llm.local` 补进 `process.env`；
+  `npm run dev` / `dev:bg` / `dev:vinext` / `build:vinext` / `start:vinext` 都走它。
+- vinext 侧由 `cloudflare.config.ts` 把 `LLM_*` 映射成文本绑定，nodejs_compat 再映射到
+  workerd 的 `process.env`；生产环境请用 cf/wrangler 的 secret。
+
+### Profile 支持思考模式
+
+`llm_profiles` 新增两列（`migrations/0002_llm_thinking.sql`）：
+
+| 字段 | 取值 | 行为 |
+|---|---|---|
+| `thinking` | `default` / `enabled` / `disabled` | 显式发 `{"thinking":{"type":"enabled"}}`；`default` 不传 |
+| `reasoning_effort` | `low` / `high` / `max` | 发 `reasoning_effort`；不填则用模型默认 |
+
+- `ensureD1Schema` 对 `ALTER TABLE ... ADD COLUMN` 的「重复列」错误做容忍，已有库可平滑升级。
+- 后台「LLM 切换」表单里可直接选思考模式与强度；列表会显示当前设置。
+- `/api/read` 只转发 `delta.content`，**思考链 `reasoning_content` 不下发给前端**。
+- 思考模式会忽略 `temperature`（DeepSeek 文档），`max_tokens` 设为 4096；
+  首字延迟实测约 20 秒，解卦面板会显示「研墨中 · Ns（思考模式首字较慢）」。
+
+### 当前本地配置
+
+- Profile：`DeepSeek Flash` → `https://api.deepseek.com` · `deepseek-flash` · `LLM_API_KEY`
+  · thinking=enabled · effort=high。
+- 本地 `.llm.local`：`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL=deepseek-flash`。
+- 实测：`POST /api/read` → 200，约 23 秒，840 字，四段齐全；面板渲染 4 个标题、5 段正文、0 错误。
+
+### 安全提醒
+
+key 已出现在对话里；若这份对话会被分享/存档，建议到 DeepSeek 控制台轮换一次，
+再更新本地 `.llm.local`。仓库与 D1 里都不含该 key（已用 `git check-ignore` 验证）。

@@ -28,6 +28,9 @@ export interface AnalyticsSettings {
   updatedAt: string;
 }
 
+export type ThinkingMode = 'default' | 'enabled' | 'disabled';
+export type ReasoningEffort = 'low' | 'high' | 'max';
+
 export interface LlmProfile {
   id: string;
   label: string;
@@ -35,6 +38,10 @@ export interface LlmProfile {
   model: string;
   /** 密钥所在的**环境变量名**，密钥本身永不入库 */
   keyEnv: string;
+  /** 思考模式：default 表示不显式传（由模型决定），enabled/disabled 显式开关 */
+  thinking?: ThinkingMode;
+  /** 思考强度（DeepSeek：low/high/max） */
+  reasoningEffort?: ReasoningEffort;
   enabled: boolean;
   sort: number;
   updatedAt: string;

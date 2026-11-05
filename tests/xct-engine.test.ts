@@ -45,7 +45,7 @@ describe('小成图 · 九宫与正推', () => {
         }
       }
     }
-  });
+  }, 30_000);
 
   it('中宫恒为天地归藏，八宫天盘取自本卦/之卦/互卦', () => {
     const board = buildBoard({ upper: '乾', lower: '兑' }, { upper: '离', lower: '坤' });

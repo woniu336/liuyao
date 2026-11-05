@@ -108,6 +108,16 @@ describe('后台输入校验（fail-closed）', () => {
     const p = parseProfile(valid);
     expect(p.baseUrl).toBe('https://api.deepseek.com');
     expect(p.id).toMatch(/^deepseek-[a-z0-9]{4}$/);
+    expect(p.thinking).toBe('default');
+    expect(p.reasoningEffort).toBeUndefined();
+
+    const withThinking = parseProfile({ ...valid, thinking: 'enabled', reasoningEffort: 'high' });
+    expect(withThinking.thinking).toBe('enabled');
+    expect(withThinking.reasoningEffort).toBe('high');
+
+    const bogus = parseProfile({ ...valid, thinking: 'maybe', reasoningEffort: 'ultra' });
+    expect(bogus.thinking).toBe('default');
+    expect(bogus.reasoningEffort).toBeUndefined();
 
     expect(() => parseProfile({ ...valid, baseUrl: 'http://api.deepseek.com' })).toThrow(AdminValidationError);
     expect(() => parseProfile({ ...valid, baseUrl: 'http://localhost:4010/' })).not.toThrow();

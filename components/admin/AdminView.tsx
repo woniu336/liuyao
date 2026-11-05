@@ -14,6 +14,8 @@ import type {
   AnalyticsProvider,
   AnnouncementLevel,
   LlmProfile,
+  ReasoningEffort,
+  ThinkingMode,
 } from '@/lib/admin/types';
 
 type Tab = 'announcement' | 'llm' | 'analytics' | 'audit';
@@ -385,12 +387,16 @@ function AnnouncementPanel({
   );
 }
 
-const emptyProfile = (): Pick<LlmProfile, 'id' | 'label' | 'baseUrl' | 'model' | 'keyEnv' | 'enabled' | 'sort'> => ({
+const emptyProfile = (): Pick<
+  LlmProfile,
+  'id' | 'label' | 'baseUrl' | 'model' | 'keyEnv' | 'thinking' | 'reasoningEffort' | 'enabled' | 'sort'
+> => ({
   id: '',
   label: '',
   baseUrl: 'https://api.deepseek.com',
-  model: 'deepseek-chat',
+  model: 'deepseek-flash',
   keyEnv: 'LLM_API_KEY',
+  thinking: 'default',
   enabled: true,
   sort: 0,
 });
@@ -451,7 +457,13 @@ function LlmPanel({
     setTestResult('测试中…');
     const res = await post({
       action: 'test',
-      profile: { baseUrl: form.baseUrl, model: form.model, keyEnv: form.keyEnv },
+      profile: {
+        baseUrl: form.baseUrl,
+        model: form.model,
+        keyEnv: form.keyEnv,
+        thinking: form.thinking,
+        reasoningEffort: form.reasoningEffort,
+      },
     });
     if (res) {
       setTestResult(
@@ -505,6 +517,10 @@ function LlmPanel({
                     <span>{p.model}</span>
                     <span>{p.baseUrl}</span>
                     <span>key: {p.keyEnv}</span>
+                    <span>
+                      思考:{p.thinking === 'enabled' ? '开' : p.thinking === 'disabled' ? '关' : '默认'}
+                      {p.reasoningEffort ? `·${p.reasoningEffort}` : ''}
+                    </span>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 font-serif text-[11.5px]">
@@ -558,6 +574,33 @@ function LlmPanel({
           <div>
             <span className={labelCls}>排序（小的在前）</span>
             <input type="number" value={form.sort} onChange={(e) => update('sort', Number(e.target.value))} className={inputCls} />
+          </div>
+          <div>
+            <span className={labelCls}>思考模式</span>
+            <select
+              value={form.thinking ?? 'default'}
+              onChange={(e) => update('thinking', e.target.value as ThinkingMode)}
+              className={inputCls}
+            >
+              <option value="default">默认（由模型决定）</option>
+              <option value="enabled">开启</option>
+              <option value="disabled">关闭</option>
+            </select>
+          </div>
+          <div>
+            <span className={labelCls}>思考强度</span>
+            <select
+              value={form.reasoningEffort ?? ''}
+              onChange={(e) =>
+                update('reasoningEffort', (e.target.value || undefined) as ReasoningEffort | undefined)
+              }
+              className={inputCls}
+            >
+              <option value="">不指定</option>
+              <option value="low">low</option>
+              <option value="high">high</option>
+              <option value="max">max</option>
+            </select>
           </div>
           <label className="mt-5 flex items-center gap-2 font-serif text-[12px] text-[#22201b]">
             <input type="checkbox" checked={form.enabled} onChange={(e) => update('enabled', e.target.checked)} />

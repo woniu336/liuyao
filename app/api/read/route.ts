@@ -17,7 +17,13 @@
 import { buildReadingPrompt } from './prompt';
 import type { ReadingFacts } from '@/lib/readings/types';
 import { getAdminStore } from '@/lib/admin/store';
-import { SETTING_LLM_ACTIVE, type LlmProfile } from '@/lib/admin/types';
+import {
+  SETTING_LLM_ACTIVE,
+  type LlmProfile,
+  type ReasoningEffort,
+  type ThinkingMode,
+} from '@/lib/admin/types';
+import { buildChatRequestBody } from '@/lib/readings/llm-request';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_LIMIT = { windowMs: 60_000, max: 8 };
@@ -49,6 +55,16 @@ interface LlmConfig {
   baseUrl: string;
   model: string;
   profileLabel?: string;
+  thinking?: ThinkingMode;
+  reasoningEffort?: ReasoningEffort;
+}
+
+function parseThinking(value: string | undefined): ThinkingMode | undefined {
+  return value === 'enabled' || value === 'disabled' ? value : undefined;
+}
+
+function parseEffort(value: string | undefined): ReasoningEffort | undefined {
+  return value === 'low' || value === 'high' || value === 'max' ? value : undefined;
 }
 
 interface LlmResolution {
@@ -83,7 +99,14 @@ async function resolveLlmConfig(): Promise<LlmResolution> {
           };
         }
         return {
-          config: { key, baseUrl: profile.baseUrl, model: profile.model, profileLabel: profile.label },
+          config: {
+            key,
+            baseUrl: profile.baseUrl,
+            model: profile.model,
+            profileLabel: profile.label,
+            thinking: profile.thinking,
+            reasoningEffort: profile.reasoningEffort,
+          },
           source: 'admin',
           profileLabel: profile.label,
         };
@@ -100,6 +123,8 @@ async function resolveLlmConfig(): Promise<LlmResolution> {
       key,
       baseUrl: (process.env.LLM_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, ''),
       model: process.env.LLM_MODEL || 'deepseek-chat',
+      thinking: parseThinking(process.env.LLM_THINKING),
+      reasoningEffort: parseEffort(process.env.LLM_REASONING_EFFORT),
     },
     source: 'env',
   };
@@ -162,16 +187,17 @@ export async function POST(req: Request): Promise<Response> {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config.key}`,
       },
-      body: JSON.stringify({
-        model: config.model,
-        stream: true,
-        temperature: 0.3,
-        max_tokens: 1600,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-      }),
+      body: JSON.stringify(
+        buildChatRequestBody({
+          model: config.model,
+          thinking: config.thinking,
+          reasoningEffort: config.reasoningEffort,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+        }),
+      ),
       signal: AbortSignal.timeout(120_000),
     });
   } catch (e) {

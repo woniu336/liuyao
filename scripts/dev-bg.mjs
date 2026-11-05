@@ -8,6 +8,7 @@
  * 日志写 logs/dev.out.log，最后等端口就绪。前台 `npm run dev` 仍然可用。
  */
 import { execSync, spawn } from 'node:child_process';
+import { loadLocalSecrets } from './load-secrets.mjs';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
@@ -15,6 +16,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+loadLocalSecrets(projectRoot);
 const LOG_DIR = path.join(projectRoot, 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'dev.out.log');
 const PORT = Number(process.env.PORT || 3000);

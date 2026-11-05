@@ -77,8 +77,10 @@ export default function ReadingPanel({ facts }: { facts: LiuyaoReadingFacts }) {
   const [error, setError] = useState('');
   const [showFacts, setShowFacts] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const stickRef = useRef(true);
+  const startedAtRef = useRef(0);
 
   // 换一卦就重置
   useEffect(() => {
@@ -107,10 +109,20 @@ export default function ReadingPanel({ facts }: { facts: LiuyaoReadingFacts }) {
     }
   }, [text, phase]);
 
+  useEffect(() => {
+    if (phase !== 'streaming') return;
+    const id = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [phase]);
+
   const run = useCallback(async () => {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    startedAtRef.current = Date.now();
+    setElapsed(0);
     setPhase('streaming');
     setText('');
     setError('');
@@ -220,7 +232,8 @@ export default function ReadingPanel({ facts }: { facts: LiuyaoReadingFacts }) {
               <i className="h-1 w-1 animate-pulse rounded-full bg-[#B08A5E] [animation-delay:180ms]" />
               <i className="h-1 w-1 animate-pulse rounded-full bg-[#B08A5E] [animation-delay:360ms]" />
             </span>
-            研墨中
+            研墨中{elapsed >= 3 ? ` · ${elapsed}s` : ''}
+            {elapsed >= 20 && <span className="text-[10.5px] text-[#A79C8A]">（思考模式首字较慢）</span>}
           </div>
         )}
 

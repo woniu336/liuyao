@@ -14,8 +14,10 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { loadLocalSecrets } from './load-secrets.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+loadLocalSecrets(projectRoot);
 const nextBin = path.join(projectRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
 
 const env = { ...process.env };
