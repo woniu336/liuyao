@@ -4,6 +4,7 @@ import { adminError, adminJson, readJsonBody } from '@/lib/admin/server/http';
 import { parseProfile } from '@/lib/admin/server/validate';
 import { SETTING_LLM_ACTIVE, type LlmProfile } from '@/lib/admin/types';
 import { buildChatRequestBody } from '@/lib/readings/llm-request';
+import { buildProviderHeaders } from '@/lib/readings/provider-headers';
 
 /**
  * LLM 配置管理（受保护）。
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
       try {
         const upstream = await fetch(`${target.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+          headers: buildProviderHeaders(target.baseUrl, key),
           body: JSON.stringify(
             buildChatRequestBody({
               model: target.model,

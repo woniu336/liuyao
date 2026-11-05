@@ -24,6 +24,7 @@ import {
   type ThinkingMode,
 } from '@/lib/admin/types';
 import { buildChatRequestBody } from '@/lib/readings/llm-request';
+import { buildProviderHeaders } from '@/lib/readings/provider-headers';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_LIMIT = { windowMs: 60_000, max: 8 };
@@ -183,10 +184,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     upstream = await fetch(`${config.baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.key}`,
-      },
+      headers: buildProviderHeaders(config.baseUrl, config.key),
       body: JSON.stringify(
         buildChatRequestBody({
           model: config.model,
@@ -225,6 +223,24 @@ export async function POST(req: Request): Promise<Response> {
           /* 客户端断开 */
         }
       };
+      const sendComment = (text: string) => {
+        try {
+          controller.enqueue(encoder.encode(`: ${text}\n\n`));
+        } catch {
+          /* 客户端断开 */
+        }
+      };
+
+      // 思考模式首字可能要几十秒，中间任何一跳（浏览器/代理/网关）都可能因空闲断流。
+      // SSE 注释帧不进入客户端解析，只用来保持连接；顺带把「还在想」告诉前端。
+      let lastActivity = Date.now();
+      const heartbeat = setInterval(() => {
+        if (Date.now() - lastActivity > 8_000) {
+          lastActivity = Date.now();
+          sendComment('keep-alive');
+        }
+      }, 8_000);
+      sendComment('open');
 
       let buffer = '';
       const reader = upstreamBody.getReader();
@@ -247,7 +263,10 @@ export async function POST(req: Request): Promise<Response> {
               try {
                 const json = JSON.parse(data);
                 const content = json?.choices?.[0]?.delta?.content;
-                if (typeof content === 'string' && content) send({ content });
+                if (typeof content === 'string' && content) {
+                  lastActivity = Date.now();
+                  send({ content });
+                }
               } catch {
                 /* 上游心跳/非 JSON 行，忽略 */
               }
@@ -258,6 +277,7 @@ export async function POST(req: Request): Promise<Response> {
       } catch (e) {
         send({ error: (e as Error).message });
       } finally {
+        clearInterval(heartbeat);
         try {
           controller.close();
         } catch {

@@ -32,20 +32,37 @@ describe('解卦 prompt（精简版）', () => {
   const facts = factsOf([0, 1, 1, 1, 1, 1]);
   const { system, user } = buildReadingPrompt(facts);
 
-  it('系统提示已经压到千字级，且明确「不重排盘」', () => {
-    expect(system.length).toBeLessThan(1600);
+  it('系统提示仍在两千字内，且明确「不重排盘」', () => {
+    expect(system.length).toBeLessThan(2000);
     expect(system).toContain('不要重排盘');
     expect(system).toContain('不断死');
     expect(system).toContain('应期');
   });
 
-  it('移除了排盘教程、病占专项、报告式自检', () => {
+  it('移除了排盘教程与报告式自检', () => {
     expect(system).not.toContain('六神起法');
     expect(system).not.toContain('排盘规范');
-    expect(system).not.toContain('病占专项');
     expect(system).not.toContain('自检清单');
     expect(system).not.toContain('输入核对');
     expect(system).not.toContain('复盘');
+  });
+
+  it('保留病占专项，且限定只在病症类占问启用', () => {
+    expect(system).toContain('病占专项');
+    expect(system).toContain('段首必须是下面四行原文');
+    expect(system).toContain('近病逢冲即愈');
+    expect(system).toContain('子孙制鬼');
+    expect(system).toContain('主治医生');
+    expect(system).toContain('其余占问跳过本节');
+  });
+
+  it('字数预算：四段各有额度，全文硬上限 600 字', () => {
+    expect(system).toContain('400–550');
+    expect(system).toContain('硬上限 600 字');
+    expect(system).toContain('取用约 100 字');
+    expect(system).toContain('盘面约 180 字');
+    expect(system).toContain('走势约 150 字');
+    expect(system).toContain('应期约 80 字');
   });
 
   it('用户消息带盘面事实、十三神煞与经文，且不含翻译注文', () => {
@@ -62,8 +79,8 @@ describe('解卦 prompt（精简版）', () => {
   it('输出要求是四段禅意写法，不要求长篇报告', () => {
     expect(system).toContain('一、取用');
     expect(system).toContain('四、应期');
-    expect(system).toContain('500–800 字');
     expect(system).not.toContain('输出格式');
+    expect(system).not.toContain('13 段');
   });
 
   it('神煞取值与盘面同源（来自 shensha.ts，而非模型自算）', () => {
