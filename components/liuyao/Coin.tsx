@@ -22,14 +22,15 @@ const FACE_SRC: Record<CoinSide, string> = {
 export function Coin({
   side,
   rolling,
-  size = 64,
   delayMs = 0,
+  rotateDeg = 0,
   onSettled,
 }: {
   side: CoinSide;
   rolling: boolean;
-  size?: number;
   delayMs?: number;
+  /** 静置时的轻微倾斜，避免三枚"站军姿"般整齐 */
+  rotateDeg?: number;
   onSettled?: () => void;
 }) {
   const [phase, setPhase] = useState<'idle' | 'rolling' | 'settling'>('idle');
@@ -47,8 +48,12 @@ export function Coin({
 
   return (
     <div
-      style={{ width: size, height: size, perspective: 600 }}
-      className="relative select-none"
+      className="coin-size relative select-none"
+      style={{
+        perspective: 600,
+        transform: rolling ? undefined : `rotate(${rotateDeg}deg)`,
+        transition: 'transform 400ms cubic-bezier(0.16,1,0.3,1)',
+      }}
       aria-label={`铜钱 ${side}面`}
       role="img"
     >
@@ -86,17 +91,15 @@ export function Coin({
             src={FACE_SRC[face]}
             alt=""
             draggable={false}
-            width={size}
-            height={size}
             style={{
               position: 'absolute',
               inset: 0,
-              width: size,
-              height: size,
+              width: '100%',
+              height: '100%',
               objectFit: 'contain',
               backfaceVisibility: 'hidden',
               transform: face === '字' ? 'rotateY(0deg)' : 'rotateY(180deg)',
-              filter: 'drop-shadow(0 3px 6px rgba(31,42,48,0.18))',
+              filter: 'drop-shadow(0 4px 8px rgba(31,42,48,0.22))',
             }}
           />
         ))}

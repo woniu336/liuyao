@@ -280,12 +280,13 @@ textarea::placeholder {
 .btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fffdf8;
+  background: #1F2A30;
+  border-color: #1F2A30;
+  color: #FBFBF7;
+  letter-spacing: 0.06em;
 }
 
-.btn.primary:hover { background: #8d2a22; border-color: #8d2a22; color: #fffdf8; }
+.btn.primary:hover { background: #2C3A42; border-color: #2C3A42; color: #FBFBF7; }
 
 .btn:disabled,
 .btn[aria-disabled='true'] { opacity: 0.45; cursor: default; }
@@ -293,8 +294,8 @@ textarea::placeholder {
 .btn.primary:disabled,
 .btn.primary[aria-disabled='true'] {
   opacity: 1;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: #E4EBED;
+  color: #7C9099;
   border-color: transparent;
 }
 
@@ -330,6 +331,19 @@ textarea::placeholder {
   --bg-sunken: #EAE8E0;
   --surface: #FDFCF7;
   --hairline: #DFD9CB;
+}
+
+/* 铜钱尺寸：与原项目一致（移动 74、宽屏 84）；源图 85×85，别再放大以免糊 */
+.coin-size {
+  width: 74px;
+  height: 74px;
+}
+
+@media (min-width: 640px) {
+  .coin-size {
+    width: 84px;
+    height: 84px;
+  }
 }
 
 /* 铜钱翻滚：3D 翻转 + 轻微抛起；时长与落地由组件控制（animationend 后才定格） */

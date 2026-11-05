@@ -71,7 +71,24 @@ function renderBlocks(text: string) {
   );
 }
 
-export default function ReadingPanel({ facts }: { facts: LiuyaoReadingFacts }) {
+export interface ReadingPanelHandle {
+  start: () => void;
+  stop: () => void;
+}
+
+export interface ReadingPanelProps {
+  facts: LiuyaoReadingFacts;
+  /** 正文增量回调（用于解析用神、底部按钮状态） */
+  onTextChange?: (text: string) => void;
+  onPhaseChange?: (phase: Phase) => void;
+  /** 是否隐藏面板自带的入口按钮（页面底部已有主按钮时用） */
+  hideIdleButton?: boolean;
+}
+
+const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(function ReadingPanel(
+  { facts, onTextChange, onPhaseChange, hideIdleButton },
+  ref,
+) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -195,6 +212,20 @@ export default function ReadingPanel({ facts }: { facts: LiuyaoReadingFacts }) {
 
   const blocks = useMemo(() => renderBlocks(text), [text]);
 
+  useEffect(() => {
+    onTextChange?.(text);
+  }, [text, onTextChange]);
+
+  useEffect(() => {
+    onPhaseChange?.(phase);
+  }, [phase, onPhaseChange]);
+
+  React.useImperativeHandle(ref, () => ({ start: () => void run(), stop }), [run]);
+
+  if (phase === 'idle' && hideIdleButton) {
+    return null;
+  }
+
   if (phase === 'idle') {
     return (
       <section className="mt-7 border-t border-[#E8DFC9] pt-6">
@@ -287,4 +318,6 @@ export default function ReadingPanel({ facts }: { facts: LiuyaoReadingFacts }) {
       </div>
     </section>
   );
-}
+});
+
+export default ReadingPanel;

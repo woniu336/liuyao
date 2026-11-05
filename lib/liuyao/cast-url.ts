@@ -46,7 +46,10 @@ export function decodeCastState(params: URLSearchParams): CastState | null {
   return { coins, timeInput: t, gender: g, marital, question: params.get('q') ?? '' };
 }
 
-/** 爻值 → 三枚币面（仅用于展示） */
+/**
+ * 爻值 → 三枚币面（仅用于展示）。
+ * 字 = 2、背 = 3：6 三字 · 7 一背 · 8 两背 · 9 三背。
+ */
 export function coinSidesOf(value: number): ('字' | '背')[] {
   switch (value) {
     case 6:
@@ -54,10 +57,10 @@ export function coinSidesOf(value: number): ('字' | '背')[] {
     case 7:
       return ['背', '字', '字'];
     case 8:
-      return ['字', '背', '背'];
+      return ['背', '背', '字'];
     case 9:
       return ['背', '背', '背'];
     default:
-      return ['字', '背', '字'];
+      return ['字', '字', '字'];
   }
 }

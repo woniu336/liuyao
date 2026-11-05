@@ -18,6 +18,9 @@ import { getChangedHexagramLinesMap } from './hexagram-changed-lines';
 import { calcGuShiShenSha, extractLiuyaoTimeInfo, SHENSHA_ORDER, type GuShiShenSha } from '@/lib/zhanbu/shensha';
 import { BRANCH_ELEMENTS, formatSolarDateDisplay, getMutatedRelationTags, type BoardViewProps } from '@/lib/liuyao/board-view';
 
+/** 古籍盘面的设计基准宽度：低于此宽度按比例整体缩放，版式关系不变 */
+export const BOARD_BASE_WIDTH = 390;
+
 /** 爻画：阳爻一整条，阴爻两段（与原版同一几何：宽 46 / 高 9.5 / 阴爻 gap 8） */
 export function MobileYaoBar({
   isYang,
@@ -103,8 +106,15 @@ export function getSanitizedHiddenSpirit(hidden?: BoardViewProps['lines'][number
   return s.length >= 2 ? s : '';
 }
 
-const HexagramBoard = forwardRef<HTMLDivElement, BoardViewProps>(function HexagramBoard(props, ref) {
-  const { question, gender, datetime_info, hexagram_info, lines } = props;
+export interface HexagramBoardProps extends BoardViewProps {
+  /** 需要高亮的爻位（1..6），用于标出「用神」 */
+  highlightPosition?: number | null;
+  /** 高亮标签，默认「用神」 */
+  highlightLabel?: string;
+}
+
+const HexagramBoard = forwardRef<HTMLDivElement, HexagramBoardProps>(function HexagramBoard(props, ref) {
+  const { question, gender, datetime_info, hexagram_info, lines, highlightPosition, highlightLabel = '用神' } = props;
   const barColor = '#2C2723';
 
   // 上爻(6) → 初爻(1)
@@ -321,10 +331,37 @@ const HexagramBoard = forwardRef<HTMLDivElement, BoardViewProps>(function Hexagr
                   paddingTop: 3,
                   boxSizing: 'border-box',
                   borderBottom: '1px solid #EAE5D4',
-                  backgroundColor: 'transparent',
+                  backgroundColor: highlightPosition === line.position ? 'rgba(138,106,58,0.07)' : 'transparent',
                   minWidth: changedTitle ? 390 : undefined,
                 }}
               >
+                {highlightPosition === line.position && (
+                  <>
+                    <span
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 2,
+                        background: '#8A6A3A',
+                      }}
+                    />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 2,
+                        fontSize: 9.5,
+                        letterSpacing: 1,
+                        color: '#8A6A3A',
+                      }}
+                    >
+                      {highlightLabel}
+                    </span>
+                  </>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', height: 20 }}>
                   {/* 1. 六神 */}
                   <span style={{ width: 32, textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: '#4B443B', flexShrink: 0 }}>

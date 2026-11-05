@@ -7,6 +7,7 @@ import { HexagramSvg } from '@/components/hexagram/HexagramSvg';
 import { masksOf, movingPositions, lineTitle } from '@/lib/hexagram/hex-math';
 import { lookupByMask, resolveHexagramInfo } from '@/lib/hexagram/lookup';
 import { tossLine, tossLines } from '@/lib/liuyao/random';
+import { Coin } from './Coin';
 import {
   advance,
   initialState as yarrowInitial,
@@ -32,7 +33,13 @@ export interface CastWorkbenchProps {
 
 export type CoinFace = 2 | 3; // 2=字(阴), 3=背(阳)
 
-/** 爻值 → 三枚币面（仅用于展示；真实结果由 random.ts 的加密随机决定） */
+/**
+ * 爻值 → 三枚币面（仅用于展示；真实结果由 random.ts 的加密随机决定）
+ *
+ * 字 = 2、背 = 3，三枚之和即爻值：
+ *   6 老阴 = 字字字（0 背）· 7 少阳 = 背字字（1 背）
+ *   8 少阴 = 背背字（2 背）· 9 老阳 = 背背背（3 背）
+ */
 export function coinFacesOf(value: number): [CoinFace, CoinFace, CoinFace] {
   switch (value) {
     case 6:
@@ -40,11 +47,11 @@ export function coinFacesOf(value: number): [CoinFace, CoinFace, CoinFace] {
     case 7:
       return [3, 2, 2];
     case 8:
-      return [2, 2, 3];
+      return [3, 3, 2];
     case 9:
       return [3, 3, 3];
     default:
-      return [2, 3, 2];
+      return [2, 2, 2];
   }
 }
 
@@ -479,7 +486,7 @@ export default function CastWorkbench({
               onClick={() => onComplete(activeValues)}
               className="btn primary sm w-full font-serif tracking-widest cursor-pointer shadow-md active:scale-95 transition-all touch-manipulation"
             >
-              确立卦象 · 查看卦辞爻辞 →
+              六爻已齐 · 起局 →
             </button>
           ) : (
             castCount > 0 && (
@@ -510,7 +517,7 @@ export default function CastWorkbench({
   }
 
   return (
-    <div className="w-full rounded-xl border border-[#E0D8C9] bg-[#FFFDF8] p-5 sm:p-7 shadow-xs font-serif text-[#17140F]">
+    <div className="w-full rounded-md border border-line bg-paper-0 p-5 shadow-[0_1px_2px_rgba(31,42,48,0.05)] sm:p-7 font-serif text-ink-900">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
         {/* 左侧：起筮操作台 (7/12) */}
         <div className="md:col-span-7 flex flex-col justify-between items-center text-center space-y-4">
@@ -538,23 +545,20 @@ export default function CastWorkbench({
           {/* 三枚物理铜钱展示区 */}
           <div
             onClick={!isComplete && !isTossing && !disabled ? handleToss : undefined}
-            className={`coins flex items-center justify-center gap-4 py-3 select-none ${
+            className={`coins flex min-h-[118px] items-center justify-center gap-6 py-3 select-none ${
               !isComplete && !isTossing && !disabled ? 'cursor-pointer' : ''
             }`}
             title={!isComplete && !isTossing ? '点击掷钱' : undefined}
           >
-            {currentCoins.map((face, idx) => {
-              const isYang = face === 3;
-              return (
-                <div
-                  key={idx}
-                  className={`coin ${isYang ? 'y' : 'n'} ${isTossing ? 'tossing' : ''}`}
-                  style={{ '--d': `${idx * 0.08}s` } as React.CSSProperties}
-                >
-                  <span>{isYang ? '背' : '字'}</span>
-                </div>
-              );
-            })}
+            {currentCoins.map((face, idx) => (
+              <Coin
+                key={`${castCount}-${idx}`}
+                side={face === 3 ? '背' : '字'}
+                rolling={isTossing}
+                delayMs={idx * 40}
+                rotateDeg={[-9, 6, -4][idx] ?? 0}
+              />
+            ))}
           </div>
 
           {/* 投掷数学与爻象公式 */}
@@ -564,7 +568,7 @@ export default function CastWorkbench({
                 字面为 2（阴）· 背面为 3（阳）· 2+2+2=6(老阴) · 3+3+3=9(老阳)
               </p>
             ) : (
-              <div className="inline-flex items-center gap-2 rounded-md bg-[#FAF8F1] border border-[#E0D8C9] px-3 py-1 text-xs">
+              <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-md border border-[#E0D8C9] bg-[#FAF8F1] px-3 py-1.5 text-[11.5px] leading-tight">
                 <span className="font-bold text-[#17140F]">
                   第 {castCount} 爻（{lineTitle(castCount, latestYang)}）
                 </span>

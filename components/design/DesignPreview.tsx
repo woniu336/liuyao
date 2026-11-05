@@ -137,7 +137,7 @@ export default function DesignPage() {
             {/* 铜钱：真实照片正反两面，3D 翻滚后停在结果面 */}
             <div className="flex items-center justify-center gap-8 py-3">
               {coins.map((face, i) => (
-                <Coin key={`${tossSeq}-${i}`} side={face} rolling={rolling} size={72} delayMs={i * 40} />
+                <Coin key={`${tossSeq}-${i}`} side={face} rolling={rolling} delayMs={i * 40} rotateDeg={[-9, 6, -4][i] ?? 0} />
               ))}
             </div>
 
