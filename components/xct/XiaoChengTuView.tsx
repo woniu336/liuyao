@@ -33,6 +33,8 @@ import { judgeFullBoard } from '@/lib/xct/judgeEngine';
 import { traceZhengTuiChain } from '@/lib/xct/dagTracker';
 import { ALL_TRIGRAMS, PALACE_NAMES, SIXTY_FOUR_HEXAGRAMS, XIAN_TIAN_NUMBER } from '@/lib/xct/constants';
 import { secureDigits } from '@/lib/liuyao/random';
+import { decodeCastState } from '@/lib/liuyao/cast-url';
+import { structureFromCoins } from '@/lib/xct/yi-bian';
 import { getCaseStore } from '@/lib/store';
 import { buildXctRecord } from '@/lib/cases/record';
 
@@ -277,7 +279,29 @@ export default function XiaoChengTuView() {
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
-    const id = new URLSearchParams(window.location.search).get('case');
+    const params = new URLSearchParams(window.location.search);
+
+    // 起卦页传来的同一卦：由六爻三钱结果立小成图盘（含静卦的宜变法）
+    const cast = decodeCastState(params);
+    if (cast) {
+      const structure = structureFromCoins(cast.coins);
+      const manual = {
+        benUpper: structure.ben.upper,
+        benLower: structure.ben.lower,
+        zhiUpper: structure.zhi.upper,
+        zhiLower: structure.zhi.lower,
+      };
+      setMethod('self');
+      setManualBenUpper(manual.benUpper);
+      setManualBenLower(manual.benLower);
+      setManualZhiUpper(manual.zhiUpper);
+      setManualZhiLower(manual.zhiLower);
+      setSelectedTime(cast.timeInput);
+      runCast({ method: 'self', manual, timeDate: cast.timeInput });
+      return;
+    }
+
+    const id = params.get('case');
     if (!id) return;
     void (async () => {
       const store = await getCaseStore();
@@ -368,6 +392,16 @@ export default function XiaoChengTuView() {
             <span className="font-serif text-[13px] font-semibold tracking-[0.18em] text-[#22201B]">小成图 · 排盘</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const qs = new URLSearchParams(window.location.search);
+                window.location.href = qs.get('c') && qs.get('t') ? `/liuyao?${qs.toString()}` : '/liuyao';
+              }}
+              className="press font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline"
+            >
+              六爻
+            </button>
             <Link
               href="/cases"
               className="hidden font-serif text-[11px] text-[#5e5a50] underline-offset-4 hover:text-[#8e3a2c] hover:underline sm:inline"

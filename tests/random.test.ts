@@ -36,6 +36,35 @@ describe('起卦随机源', () => {
     expect(secureDigits(9).every((d) => /^[0-9]$/.test(d))).toBe(true);
   });
 
+  it('爻值理论分布严格为 6:1/8 · 7:3/8 · 8:3/8 · 9:1/8', async () => {
+    const { __idealDistribution } = await import('../lib/liuyao/random');
+    expect(__idealDistribution()).toEqual({ 6: 0.125, 7: 0.375, 8: 0.375, 9: 0.125 });
+  });
+
+  it('大样本爻值分布通过卡方检验（df=3，阈值 16.27≈p0.001）', () => {
+    const rounds = 40_000;
+    const counts: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
+    for (const v of tossLines(rounds)) counts[v] += 1;
+
+    const expected: Record<number, number> = {
+      6: rounds / 8,
+      7: (rounds * 3) / 8,
+      8: (rounds * 3) / 8,
+      9: rounds / 8,
+    };
+    const chi2 = [6, 7, 8, 9].reduce(
+      (sum, v) => sum + (counts[v] - expected[v]) ** 2 / expected[v],
+      0,
+    );
+    // 同时给出实测占比，便于人工核对（4 万掷时单类别标准误约 0.1–0.16pp）
+    const ratio = (v: number) => counts[v] / rounds;
+    expect(Math.abs(ratio(6) - 0.125)).toBeLessThan(0.008);
+    expect(Math.abs(ratio(7) - 0.375)).toBeLessThan(0.012);
+    expect(Math.abs(ratio(8) - 0.375)).toBeLessThan(0.012);
+    expect(Math.abs(ratio(9) - 0.125)).toBeLessThan(0.008);
+    expect(chi2).toBeLessThan(16.27);
+  });
+
   it('大样本分布均匀（字背 1:1，爻值 1:3:3:1）', () => {
     const s = tossStats(20_000);
     // 字面占比应逼近 0.5（2 万掷 ≈ 6 万枚，标准误约 0.2%，放宽到 1% 仍能抓住系统性偏差）

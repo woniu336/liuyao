@@ -12,6 +12,7 @@ import { castLiuyao, type LiuyaoChart } from '@/lib/liuyao/najia';
 import { buildLiuyaoInput, castTimeInfo, nowTimeInput, parseTimeInput, type CastTimeInfo } from '@/lib/liuyao/ganzhi';
 import { boardToText, chartToBoardProps, type BoardViewProps } from '@/lib/liuyao/board-view';
 import { buildLiuyaoReadingFacts } from '@/lib/readings/facts';
+import { decodeCastState } from '@/lib/liuyao/cast-url';
 import { getCaseStore } from '@/lib/store';
 import { buildLiuyaoRecord } from '@/lib/cases/record';
 
@@ -88,7 +89,21 @@ export default function LiuyaoView() {
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
-    const id = new URLSearchParams(window.location.search).get('case');
+    const params = new URLSearchParams(window.location.search);
+
+    // 起卦页传来的同一卦：?c=011011&t=...&g=女&m=1&q=...
+    const cast = decodeCastState(params);
+    if (cast) {
+      setQuestion(cast.question);
+      setGender(cast.gender);
+      setMethod('coin');
+      setTimeInput(cast.timeInput);
+      setAutoTime(false);
+      applyCast(cast.coins, cast.timeInput, 'coin');
+      return;
+    }
+
+    const id = params.get('case');
     if (!id) return;
     void (async () => {
       const store = await getCaseStore();
@@ -171,6 +186,22 @@ export default function LiuyaoView() {
             <span className="text-sm font-bold tracking-widest text-[#4A4238]">古筮排盘</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const qs = new URLSearchParams(window.location.search);
+                const c = qs.get('c');
+                const t = qs.get('t');
+                if (!c || !t) {
+                  window.location.href = '/xct';
+                  return;
+                }
+                window.location.href = `/xct?${qs.toString()}`;
+              }}
+              className="press text-[11.5px] text-[#7A6F62] underline-offset-4 hover:text-[#9E2A2B] hover:underline"
+            >
+              小成图
+            </button>
             <Link
               href="/cases"
               className="hidden text-[11.5px] text-[#7A6F62] underline-offset-4 hover:text-[#9E2A2B] hover:underline sm:inline"

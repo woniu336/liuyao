@@ -102,14 +102,27 @@ export interface TossStats {
   faceRatio: number;
   /** 与理论值的最大偏差（百分点） */
   maxDeviation: number;
+  /** 理论分布（6/7/8/9） */
+  ideal: Record<TossValue, number>;
 }
 
+/**
+ * 三钱法的理论分布（用于自证与测试）：
+ *   6 老阴（三字）= 1/8 · 7 少阳（一背两字）= 3/8
+ *   8 少阴（两背一字）= 3/8 · 9 老阳（三背）= 1/8
+ * 每枚铜钱字/背各 1/2，三枚独立 → 组合数 2³ = 8，故为以上比例。
+ */
 const IDEAL: Record<TossValue, number> = {
-  6: 1 / 8, // 三枚皆字
-  7: 3 / 8, // 一背两字（三阳）
-  8: 3 / 8, // 两背一字
-  9: 1 / 8, // 三枚皆背
+  6: 1 / 8,
+  7: 3 / 8,
+  8: 3 / 8,
+  9: 1 / 8,
 };
+
+/** 供测试与界面展示：返回理论分布 */
+export function __idealDistribution(): Record<TossValue, number> {
+  return { ...IDEAL };
+}
 
 /** 自证随机性：真跑 n 次，给出实测分布与偏差 */
 export function tossStats(rounds = 3000): TossStats {
@@ -133,5 +146,5 @@ export function tossStats(rounds = 3000): TossStats {
     ...([6, 7, 8, 9] as TossValue[]).map((v) => Math.abs(valueCounts[v] / rounds - IDEAL[v]) * 100),
   );
 
-  return { total: rounds, faceCounts, valueCounts, faceRatio, maxDeviation };
+  return { total: rounds, faceCounts, valueCounts, faceRatio, maxDeviation, ideal: { ...IDEAL } };
 }
