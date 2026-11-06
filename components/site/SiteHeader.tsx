@@ -3,7 +3,7 @@
 /**
  * 全站页头
  * =========
- * 左：站名「野鹤六爻」（毛笔艺术字）；右：六爻 / 案例 / 历史排盘 + 设置。
+ * 左：站名「野鹤六爻」（毛笔艺术字）；右：案例 / 历史排盘 + 设置（首页即六爻，不再单列入口）。
  * 「设置」只管一件事：解卦用的大模型（存在本机浏览器）。
  * 页面特有的动作（历史排盘、截图、保存卦例…）通过 `actions` 插到导航右侧，
  * 保证「同一块牌子」出现在所有页面，而不用各页各写一套 header。
@@ -18,7 +18,6 @@ import SettingsDialog from './SettingsDialog';
 export type SiteSection = 'liuyao' | 'examples' | 'history' | 'classics';
 
 const NAV: { id: SiteSection; label: string; href: string }[] = [
-  { id: 'liuyao', label: '六爻', href: '/' },
   { id: 'examples', label: '案例', href: '/examples' },
   { id: 'history', label: '历史排盘', href: '/cases' },
 ];
@@ -81,7 +80,7 @@ export default function SiteHeader({
           {showNav && (
             <nav
               aria-label="主导航"
-              className="flex items-center gap-3 whitespace-nowrap font-song text-[12.5px] text-[#625E52] sm:gap-5 sm:text-[13.5px]"
+              className="flex items-center gap-3.5 whitespace-nowrap font-song text-[15px] text-[#5A564C] sm:gap-6 sm:text-[16px]"
             >
               {NAV.map((item) =>
                 item.id === active ? (
