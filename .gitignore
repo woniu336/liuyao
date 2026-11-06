@@ -21,3 +21,5 @@ __pycache__
 
 .android/
 .scratch-android.json
+
+dist-android/
