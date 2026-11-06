@@ -51,11 +51,29 @@ npm run dev:vinext         # workerd + 本地 D1（http://localhost:3001）
 npm run build && npm run build:vinext
 ```
 
-## 部署前要做的事
+## 部署（自有域名，不上架应用商店）
 
-1. Node ≥ 26.12；`npx cf auth login`。
-2. 建 D1 库并绑定 `DB`；跑一次 `migrations/*.sql`。
-3. 本地验证：`npm run dev:vinext`（workerd + 本地 D1）走完「起卦 → 排盘 → 设置模型 → 解卦 →
-   历史回看」。
-4. `npm run build:vinext` 通过；`npm run check` 全绿。
-5. 真部署前再确认：是否要开自定义域名、是否要给 `/api/read` 加边缘限流。
+```bash
+npx cf auth login                                  # 设备码授权
+cf d1 create --name liuyao-db                      # 可选，deploy 也会自动 provision
+WORKER_DOMAIN=liuyao.example.com WORKER_ZONE=example.com npx cf deploy
+```
+
+- `WORKER_DOMAIN` / `WORKER_ZONE` 写在 `cloudflare.config.ts` 的 `triggers.fetch` 里；
+  不设就只挂 `*.workers.dev`。域名必须已在同一个 Cloudflare 账号下托管（DNS 在 CF）。
+- 部署产物：60 个静态资源 + Worker，**1.5MB / gzip 486KB**；绑定只有 `DB`(D1) 与 `ASSETS`，
+  不需要任何 secret（大模型 key 在用户浏览器里）。
+- D1 表结构在首次请求时惰性建（`ensureD1Schema`），无需手工跑迁移。
+- 上线后建议：给 `/api/read` 加 Cloudflare Rate Limiting 规则（内存限流只在单实例生效）；
+  若担心被当免费代理，可把上游限制在供应商白名单。
+
+## 移动端
+
+不上架商店，走 **PWA**：
+
+- `app/manifest.ts` → `/manifest.webmanifest`（standalone、暖纸主题色、案例/历史排盘快捷方式）
+- 图标：`public/icons/{icon-192,icon-512,icon-maskable-512,apple-touch-icon}.png`（由 `app/icon.svg` 渲染）
+- `public/sw.js`：导航 network-first 回落离线壳；`/_next/static`、`/icons`、`/images`、`/fonts`、`/data`
+  cache-first + 后台更新；`/api/*` 一律直连不缓存
+- `components/site/ServiceWorkerRegister.tsx`：只在**非本机域名**注册（localhost / *.local 自动注销）
+- 效果：加到主屏后全屏无地址栏，**起卦与排盘离线可用**；解卦与历史同步需要联网。
