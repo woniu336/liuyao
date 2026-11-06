@@ -5,8 +5,6 @@
 
 - 线上：<https://zhanbu.lufei.de>
 - 技术栈：Next.js 16（App Router）+ vinext / Cloudflare Workers + D1 + PWA
-- 引擎与 [bazi-web](https://github.com/woniu336/bazi-web) 同源：`lib/liuyao/najia.ts` 与参考实现
-  4696 案 SHA-256 差分全一致（`tests/liuyao-parity.test.ts`）
 
 | 页面 | 内容 |
 | --- | --- |
