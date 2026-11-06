@@ -8,7 +8,7 @@ import {
   validateLlmSettings,
   type LlmSettings,
 } from '../lib/llm/settings';
-import { normalizeLlmRequest } from '../lib/llm/server';
+import { normalizeLlmRequest, upstreamHostAllowed } from '../lib/llm/server';
 
 const deepseek: LlmSettings = {
   provider: 'deepseek',
@@ -96,6 +96,26 @@ describe('服务端校验（防打内网 / 形态硬约束）', () => {
     expect(normalizeLlmRequest({ ...ok, model: 'a b' }).ok).toBe(false);
     expect(normalizeLlmRequest({ ...ok, apiKey: '' }).ok).toBe(false);
     expect(normalizeLlmRequest({ ...ok, apiKey: 'x'.repeat(401) }).ok).toBe(false);
+  });
+
+  it('可选上游白名单：LLM_ALLOWED_HOSTS 决定放行范围', () => {
+    const saved = process.env.LLM_ALLOWED_HOSTS;
+    try {
+      delete process.env.LLM_ALLOWED_HOSTS;
+      expect(upstreamHostAllowed('https://any.example.com/v1').ok).toBe(true);
+
+      process.env.LLM_ALLOWED_HOSTS = 'deepseek.com, opencode.ai';
+      expect(upstreamHostAllowed('https://api.deepseek.com/v1').ok).toBe(true);
+      expect(upstreamHostAllowed('https://opencode.ai/zen/go/v1').ok).toBe(true);
+      const denied = upstreamHostAllowed('https://evil.example.com/v1');
+      expect(denied.ok).toBe(false);
+      if (!denied.ok) expect(denied.error).toContain('evil.example.com');
+      // 后缀匹配不能把 deepseek.com.evil.com 放进来
+      expect(upstreamHostAllowed('https://deepseek.com.evil.com/v1').ok).toBe(false);
+    } finally {
+      if (saved === undefined) delete process.env.LLM_ALLOWED_HOSTS;
+      else process.env.LLM_ALLOWED_HOSTS = saved;
+    }
   });
 
   it('没传 llm 时退回服务端环境变量（没配就是 null）', () => {

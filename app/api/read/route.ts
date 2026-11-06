@@ -21,11 +21,12 @@ import { buildLiuyaoPrompt } from './prompt';
 import type { ReadingFacts } from '@/lib/readings/types';
 import { buildChatRequestBody } from '@/lib/readings/llm-request';
 import { buildProviderHeaders } from '@/lib/readings/provider-headers';
-import { normalizeLlmRequest, type LlmRequestConfig } from '@/lib/llm/server';
+import { normalizeLlmRequest, upstreamHostAllowed, type LlmRequestConfig } from '@/lib/llm/server';
 
 const MAX_BODY_BYTES = 64 * 1024;
-const RATE_LIMIT = { windowMs: 60_000, max: 8 };
-const hits = new Map<string, { count: number; resetAt: number }>();
+/** 分钟窗 + 小时窗双限：分钟挡突发，小时挡刷量（进程内计数，多实例时偏松，正式上限交给 CF 边缘限流） */
+const RATE_LIMIT = { windowMs: 60_000, max: 8, hourMs: 3_600_000, hourMax: 60 };
+const hits = new Map<string, { count: number; resetAt: number; hourCount: number; hourResetAt: number }>();
 
 function clientIp(req: Request): string {
   const h = req.headers;
@@ -40,12 +41,39 @@ function clientIp(req: Request): string {
 function rateLimited(ip: string): boolean {
   const now = Date.now();
   const cur = hits.get(ip);
-  if (!cur || cur.resetAt < now) {
-    hits.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+  if (!cur) {
+    hits.set(ip, {
+      count: 1,
+      resetAt: now + RATE_LIMIT.windowMs,
+      hourCount: 1,
+      hourResetAt: now + RATE_LIMIT.hourMs,
+    });
     return false;
   }
-  cur.count += 1;
-  return cur.count > RATE_LIMIT.max;
+  if (cur.resetAt < now) {
+    cur.count = 1;
+    cur.resetAt = now + RATE_LIMIT.windowMs;
+  } else {
+    cur.count += 1;
+  }
+  if (cur.hourResetAt < now) {
+    cur.hourCount = 1;
+    cur.hourResetAt = now + RATE_LIMIT.hourMs;
+  } else {
+    cur.hourCount += 1;
+  }
+  return cur.count > RATE_LIMIT.max || cur.hourCount > RATE_LIMIT.hourMax;
+}
+
+/** 只接受本站页面发起的调用：带了 Origin 却不是本站，直接拒（挡住别的网站拿本站当转发口） */
+function crossSite(req: Request): boolean {
+  const origin = req.headers.get('origin');
+  if (!origin) return false;
+  try {
+    return new URL(origin).host !== new URL(req.url).host;
+  } catch {
+    return true;
+  }
 }
 
 function validFacts(x: unknown): x is ReadingFacts {
@@ -56,6 +84,10 @@ function validFacts(x: unknown): x is ReadingFacts {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  if (crossSite(req)) {
+    return Response.json({ error: '仅接受本站页面发起的解卦请求' }, { status: 403 });
+  }
+
   const ip = clientIp(req);
   if (rateLimited(ip)) {
     return Response.json({ error: '请求过于频繁，请稍后再试' }, { status: 429 });
@@ -83,6 +115,12 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: resolved.error, configured: false }, { status: 400 });
   }
   const config: LlmRequestConfig | null = resolved.config;
+  if (config) {
+    const allowed = upstreamHostAllowed(config.baseUrl);
+    if (!allowed.ok) {
+      return Response.json({ error: allowed.error, configured: false }, { status: 403 });
+    }
+  }
   if (!config) {
     return Response.json(
       {

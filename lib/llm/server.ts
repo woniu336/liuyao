@@ -80,6 +80,28 @@ export function normalizeLlmRequest(input: unknown): LlmNormalizeResult {
   return { ok: true, config: { baseUrl, model, key: apiKey, thinking, reasoningEffort } };
 }
 
+/**
+ * 可选的上游域名白名单（逗号分隔的域名后缀，如 `deepseek.com,openai.com,opencode.ai`）。
+ * 设了 `LLM_ALLOWED_HOSTS` 就只放行列表内的上游，防止本站被当成任意转发代理；
+ * 不设则放行任意 https 上游（保持「通用供应商」）。
+ */
+export function upstreamHostAllowed(baseUrl: string): { ok: true } | { ok: false; error: string } {
+  const raw = (typeof process !== 'undefined' ? process.env.LLM_ALLOWED_HOSTS : '') || '';
+  const list = raw
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  if (!list.length) return { ok: true };
+  let host = '';
+  try {
+    host = new URL(baseUrl).hostname.toLowerCase();
+  } catch {
+    return { ok: false, error: '接口地址不合法' };
+  }
+  const hit = list.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+  return hit ? { ok: true } : { ok: false, error: `上游域名不在允许列表内：${host}` };
+}
+
 /** 私人部署兜底：服务端环境变量（客户端没配时才会用到） */
 function envFallback(): LlmRequestConfig | null {
   if (typeof process === 'undefined') return null;
