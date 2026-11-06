@@ -1,5 +1,5 @@
-import type { D1Like } from '@/lib/admin/store/d1-types';
-import { getRuntimeEnv } from '@/lib/admin/server/runtime';
+import type { D1Like } from '@/lib/db/d1-types';
+import { getRuntimeEnv } from '@/lib/db/runtime';
 import { D1CaseStore } from './d1-case-store';
 import { MemoryCaseStore } from './local-store';
 import type { CaseStore } from './types';

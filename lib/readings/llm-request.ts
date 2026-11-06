@@ -1,4 +1,7 @@
-import type { ReasoningEffort, ThinkingMode } from '@/lib/admin/types';
+import type { LlmSettings } from '@/lib/llm/settings';
+
+type ThinkingMode = NonNullable<LlmSettings['thinking']>;
+type ReasoningEffort = NonNullable<LlmSettings['reasoningEffort']>;
 
 /**
  * 组装 chat/completions 请求体（纯函数，便于测试）。

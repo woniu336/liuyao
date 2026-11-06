@@ -3,19 +3,22 @@
 /**
  * 全站页头
  * =========
- * 左：篆印 + 站名「易林寻踪」；右：六爻 / 古籍 / 历史排盘 三入口。
+ * 左：站名「野鹤六爻」（毛笔艺术字）；右：六爻 / 历史排盘 两入口 + 设置。
+ * 「设置」只管一件事：解卦用的大模型（存在本机浏览器）。
  * 页面特有的动作（历史排盘、截图、保存卦例…）通过 `actions` 插到导航右侧，
  * 保证「同一块牌子」出现在所有页面，而不用各页各写一套 header。
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
+import { Settings } from 'lucide-react';
+import SettingsDialog from './SettingsDialog';
 
-export type SiteSection = 'liuyao' | 'classics' | 'history';
+export type SiteSection = 'liuyao' | 'history' | 'classics';
 
 const NAV: { id: SiteSection; label: string; href: string }[] = [
   { id: 'liuyao', label: '六爻', href: '/' },
-  { id: 'classics', label: '古籍', href: '/classics' },
   { id: 'history', label: '历史排盘', href: '/cases' },
 ];
 
@@ -42,6 +45,11 @@ export default function SiteHeader({
   className = '',
   maxWidthClassName = 'max-w-[1120px]',
 }: SiteHeaderProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  // 页头有 backdrop-blur（会成为 fixed 后代的包含块），弹窗必须挂到 body 上
+  useEffect(() => setMounted(true), []);
+
   return (
     <header
       className={[
@@ -55,15 +63,10 @@ export default function SiteHeader({
       <div
         className={`mx-auto flex h-[54px] w-full ${maxWidthClassName} items-center justify-between gap-3 px-4 sm:px-6 lg:px-8`}
       >
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[#35443D] no-underline">
-          <span
-            className="flex h-8 w-8 items-center justify-center border border-[#9A7040] font-song text-[18px] text-[#8E6337]"
-            style={{ borderRadius: 3 }}
-            aria-hidden
-          >
-            易
+        <Link href="/" className="flex shrink-0 items-center text-[#35443D] no-underline">
+          <span className="font-brand text-[21px] leading-none tracking-[0.1em] text-[#2F4438] sm:text-[23px]">
+            野鹤六爻
           </span>
-          <span className="font-song text-[17px] font-semibold tracking-[0.14em] sm:text-[19px]">易林寻踪</span>
         </Link>
 
         <div className="flex min-w-0 items-center gap-3 sm:gap-5">
@@ -90,14 +93,31 @@ export default function SiteHeader({
               )}
             </nav>
           )}
-          {actions && (
-            <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap sm:gap-3">
-              {showNav && <span aria-hidden className="hidden h-4 w-px bg-[#C8BEA8] sm:block" />}
-              {actions}
-            </div>
-          )}
+          <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap sm:gap-3">
+            {actions && (
+              <>
+                {showNav && <span aria-hidden className="hidden h-4 w-px bg-[#C8BEA8] sm:block" />}
+                {actions}
+              </>
+            )}
+            <span aria-hidden className="hidden h-4 w-px bg-[#C8BEA8] sm:block" />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="设置大模型"
+              title="设置（大模型解读）"
+              className="press flex h-8 items-center gap-1.5 rounded-full border border-[#C3B79E] bg-[#FCF9F0]/70 px-3 font-song text-[12px] text-[#4A4438] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]"
+            >
+              <Settings size={13} strokeWidth={1.7} />
+              设置
+            </button>
+          </div>
         </div>
       </div>
+      {mounted && createPortal(
+        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />,
+        document.body,
+      )}
     </header>
   );
 }

@@ -6,8 +6,8 @@
  *   - 迁移文件是唯一事实源（可交给 D1 CLI / 人工审阅）；
  *   - 但 Workers 运行时不能读文件，所以把 DDL 内联成常量，供本地自举建表。
  *
- *   node scripts/gen-admin-schema.mjs           # 生成
- *   node scripts/gen-admin-schema.mjs --check   # 只校验是否最新（CI 用）
+ *   node scripts/gen-db-schema.mjs           # 生成
+ *   node scripts/gen-db-schema.mjs --check   # 只校验是否最新（CI 用）
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,7 +36,7 @@ const statements = sql
   .map((s) => s.trim())
   .filter(Boolean);
 
-const body = `/* 由 scripts/gen-admin-schema.mjs 生成，请勿手改。
+const body = `/* 由 scripts/gen-db-schema.mjs 生成，请勿手改。
  * 事实源：migrations/*.sql
  */
 

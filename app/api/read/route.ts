@@ -1,12 +1,15 @@
 /**
  * 解卦流式接口（服务端）
  * ======================
- * POST { facts: ReadingFacts } → SSE（data: {"content": "..."} ... data: [DONE]）
+ * POST { facts: ReadingFacts, llm?: { baseUrl, model, apiKey, thinking?, reasoningEffort? } }
+ *   → SSE（data: {"content": "..."} ... data: {"done":true}）
  *
  * 边界：
- *   - 客户端只发盘面事实与问句，**永不**持有 API key；
- *   - prompt 在服务端拼（./prompt.ts），不随客户端下发；
- *   - 未配置 LLM 时明确 501，不退化成假解读。
+ *   - 大模型配置（含 key）**只存在用户浏览器的 localStorage**，每次请求随 body 带上；
+ *     服务端只在内存里用它转发一次，不落库、不写日志、不回显；
+ *   - 请求体里的 key 只对本次上游调用有效，转发完即随请求对象一起被回收；
+ *   - 没有客户端配置时，退回服务端环境变量（自建/私人部署的兜底），仍未配置则明确 501；
+ *   - prompt 在服务端拼（./prompt.ts），不随客户端下发。
  *
  * 只用 fetch / Web Streams，没有 node:* 依赖，可直接跑在 Workers（vinext/OpenNext）。
  *
@@ -16,15 +19,9 @@
 
 import { buildLiuyaoPrompt } from './prompt';
 import type { ReadingFacts } from '@/lib/readings/types';
-import { getAdminStore } from '@/lib/admin/store';
-import {
-  SETTING_LLM_ACTIVE,
-  type LlmProfile,
-  type ReasoningEffort,
-  type ThinkingMode,
-} from '@/lib/admin/types';
 import { buildChatRequestBody } from '@/lib/readings/llm-request';
 import { buildProviderHeaders } from '@/lib/readings/provider-headers';
+import { normalizeLlmRequest, type LlmRequestConfig } from '@/lib/llm/server';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_LIMIT = { windowMs: 60_000, max: 8 };
@@ -49,86 +46,6 @@ function rateLimited(ip: string): boolean {
   }
   cur.count += 1;
   return cur.count > RATE_LIMIT.max;
-}
-
-interface LlmConfig {
-  key: string;
-  baseUrl: string;
-  model: string;
-  profileLabel?: string;
-  thinking?: ThinkingMode;
-  reasoningEffort?: ReasoningEffort;
-}
-
-function parseThinking(value: string | undefined): ThinkingMode | undefined {
-  return value === 'enabled' || value === 'disabled' ? value : undefined;
-}
-
-function parseEffort(value: string | undefined): ReasoningEffort | undefined {
-  return value === 'low' || value === 'high' || value === 'max' ? value : undefined;
-}
-
-interface LlmResolution {
-  config: LlmConfig | null;
-  /** admin = 后台选定的 profile；env = 传统环境变量兜底 */
-  source: 'admin' | 'env' | 'none';
-  profileLabel?: string;
-  /** admin 模式下 profile 指向的环境变量没配 */
-  missingKeyEnv?: string;
-}
-
-/**
- * 解析当前生效的 LLM 配置：
- *   1) 后台 `llm_active_id` 指向的 profile（密钥从其 keyEnv 读取，永不入库）；
- *   2) 后台没配 profile 时，退回 LLM_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY。
- */
-async function resolveLlmConfig(): Promise<LlmResolution> {
-  try {
-    const { store } = await getAdminStore();
-    const activeId = await store.getSetting<string>(SETTING_LLM_ACTIVE);
-    if (activeId) {
-      const profiles = await store.listProfiles();
-      const profile = profiles.find((p: LlmProfile) => p.id === activeId && p.enabled);
-      if (profile) {
-        const key = (typeof process !== 'undefined' ? process.env[profile.keyEnv] : '') || '';
-        if (!key) {
-          return {
-            config: null,
-            source: 'admin',
-            profileLabel: profile.label,
-            missingKeyEnv: profile.keyEnv,
-          };
-        }
-        return {
-          config: {
-            key,
-            baseUrl: profile.baseUrl,
-            model: profile.model,
-            profileLabel: profile.label,
-            thinking: profile.thinking,
-            reasoningEffort: profile.reasoningEffort,
-          },
-          source: 'admin',
-          profileLabel: profile.label,
-        };
-      }
-    }
-  } catch {
-    /* 后台存储不可用：继续走环境变量兜底 */
-  }
-
-  const key = process.env.LLM_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
-  if (!key) return { config: null, source: 'none' };
-  return {
-    config: {
-      key,
-      baseUrl: (process.env.LLM_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, ''),
-      model: process.env.LLM_MODEL || 'deepseek-chat',
-      thinking: parseThinking(process.env.LLM_THINKING),
-      reasoningEffort: parseEffort(process.env.LLM_REASONING_EFFORT),
-    },
-    source: 'env',
-  };
 }
 
 function validFacts(x: unknown): x is ReadingFacts {
@@ -161,17 +78,16 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'facts 不合法：需要 kind 与其对应的盘面事实' }, { status: 400 });
   }
 
-  const resolution = await resolveLlmConfig();
-  const config = resolution.config;
+  const resolved = normalizeLlmRequest((body as { llm?: unknown })?.llm);
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error, configured: false }, { status: 400 });
+  }
+  const config: LlmRequestConfig | null = resolved.config;
   if (!config) {
     return Response.json(
       {
-        error:
-          resolution.source === 'admin'
-            ? `后台选定的 LLM「${resolution.profileLabel}」缺少密钥：请在服务端设置环境变量 ${resolution.missingKeyEnv}`
-            : '解卦服务未配置：请在服务端设置 LLM_API_KEY（可选 LLM_BASE_URL / LLM_MODEL），或在后台添加并启用 LLM profile。客户端不会持有密钥。',
+        error: '还没有配置大模型：点右上角「设置」填入接口地址、模型与 API Key（只保存在本机浏览器）。',
         configured: false,
-        source: resolution.source,
       },
       { status: 501 },
     );

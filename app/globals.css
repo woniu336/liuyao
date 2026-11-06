@@ -247,6 +247,20 @@ textarea::placeholder {
   .hex.stagger .line { animation: none; }
 }
 
+/* 站名艺术字：马善政毛笔楷书，只子集「野鹤六爻」四字（2.7KB，OFL-1.1，见 public/fonts/OFL-MaShanZheng.txt） */
+@font-face {
+  font-family: 'YeheBrand';
+  src: url('/fonts/yehe-brand.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+516D, U+723B, U+91CE, U+9E64;
+}
+.font-brand {
+  font-family: 'YeheBrand', 'STXingkai', '华文行楷', 'FZShuTi', 'STKaiti', 'KaiTi', serif;
+  font-weight: 400;
+}
+
 /* 隐藏原生日期选择器图标（起卦时间改用「修改」文字按钮唤起） */
 .no-native-picker::-webkit-calendar-picker-indicator {
   display: none;

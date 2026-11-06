@@ -1,5 +1,5 @@
 import { ensureD1Schema } from '@/lib/db/ensure-schema';
-import type { D1Like } from '@/lib/admin/store/d1-types';
+import type { D1Like } from '@/lib/db/d1-types';
 import type { CaseRecord, CaseStore } from './types';
 
 interface CaseRow {

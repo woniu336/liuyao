@@ -1,5 +1,5 @@
 /**
- * 运行时绑定访问（仅服务端）。
+ * 运行时绑定访问（仅服务端）—— D1 / KV 等 Workers 绑定入口。
  *
  * Next(dev/Node) 里没有 Workers 绑定；vinext/workerd 里通过 `cloudflare:workers` 取。
  * 这里用**变量说明符**做动态 import：打包器不会静态解析，Node 下抛错被吞掉，

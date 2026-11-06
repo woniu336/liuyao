@@ -18,9 +18,11 @@
 - **六十四卦可输入下拉** `components/cast/GuaCombobox.tsx` + `lib/liuyao/hexagram-index.ts`（旧 `GuaPicker` 已删）。
 - **结果页** `components/liuyao/LiuyaoResult.tsx` 单列居中 + 右上「截图确定性排盘」（`html-to-image` toPng pixelRatio 3）。
 - `/classics` 与 `/about` 已建（classics 是分类 / 来源校核空态）。
-- **站名与导航统一**：站名「易林寻踪」（`app/layout.tsx` 标题同），
-  共享页头 `components/site/SiteHeader.tsx`（左篆印 + 站名，右 **六爻 / 古籍 / 历史排盘**，可插 `actions`），
-  首页、`/cases`、`/classics` 已接入；结果页用 `showNav={false}` + 工具条。
+- **站名与导航**：站名 **野鹤六爻**（毛笔艺术字，见下），共享页头 `components/site/SiteHeader.tsx`
+  （左站名，右 **六爻 / 历史排盘** + 「设置」；古籍已从导航移除，页面仍在 `/classics`）。
+- **站名艺术字**：`public/fonts/yehe-brand.woff2` 是「马善政毛笔楷书」按 4 个字（野鹤六爻）做的子集
+  （2.7KB，OFL-1.1，`public/fonts/OFL-MaShanZheng.txt`），`app/globals.css` 里 `.font-brand` 使用，
+  回退栈 STXingkai / 华文行楷 / KaiTi。改站名要重新子集，否则回退字体。
 - **起卦弹窗**：卦成弹窗与手动指定弹窗都居中（不再是底部抽屉），卦成后只有一个「排盘解卦」。
 - **六爻结果页按设计稿重做**（`components/liuyao/LiuyaoResult.tsx`）：
   卦名 `本卦 ⇌ 变卦` + 公历干支 + 太极分隔 + 淡金边盘面纸 + 「用神 / 伏神」行；
@@ -36,6 +38,16 @@
 - **首页第二轮**：删「一键起卦」；「手动指定」移到铜钱下方进度圆点行的右侧；
   掷钱起爻按钮收窄到 `max-w-[300px]`、圆角 6px；右上加「历史排盘」；
   题签上移（146/162/182px）、副标题 14/15/16px、PC 内容宽 `max-w-[960px]`。
+- **后台已移除 + 设置（大模型）**：
+  - 删 `app/admin`、`app/api/admin/*`、`components/admin/*`、`lib/admin/*`、公告条、统计注入、
+    `/api/site-config`、`/api/announcement`；D1 迁移只剩 `cases`（`migrations/0001_init.sql`）。
+    `D1Like` / `getRuntimeEnv` 移到 `lib/db/`。
+  - 新增 `components/site/SettingsDialog.tsx` + `lib/llm/settings.ts`：右上角「设置」只做一件事 ——
+    配大模型。预置 DeepSeek / OpenAI / Moonshot / 智谱 / 通义 / OpenRouter / SiliconFlow / Ollama / 自定义，
+    按「OpenAI 兼容」通用；**只存本机 localStorage**（`liuyao.llm.v1`），不上传、不入库。
+  - `/api/read` 改为接受请求体里的 `llm`（`lib/llm/server.ts` 校验：协议、模型名、**拦内网地址**、
+    本机 Ollama 放行），没配时退回服务端 env；新增 `/api/llm-test` 做连通性测试。
+  - 弹窗必须 portal 到 body：页头有 `backdrop-blur`，会成为 fixed 后代的包含块。
 - **小成图整体下线（用户决定，不可回退）**：删 `app/xct`、`components/xct/*`、`lib/xct/*`、
   `app/api/read/prompt-xct.ts`、`docs/xct-prompt-spec.md`、`tests/xct-*.test.ts`；
   `readings` 的 xct 事实类型、`cases` 的 xct 记录类型与校验分支、`store` 的 xct 读写分支一并清理；
@@ -56,7 +68,7 @@
   （`.ink-ripple` / `.ink-drop`，见 `app/globals.css`，尊重 `prefers-reduced-motion`）。
 - **动爻位提示修正**：`movingPositions` 是 0-based，页面文案错一位；新增 `movingLineNumbers`（1-based）并补测试。
 - **hydration 修复**：结果页/复原占位不能在 render 里读 `window`，改为 `useIsoLayoutEffect` 置位。
-- `npm run check` = check:schema + check:portability + 94 项测试，全绿；`next build` 与 `build:vinext` 均通过。
+- `npm run check` = check:schema + check:portability + 78 项测试，全绿；`next build` 与 `build:vinext` 均通过。
 
 ## 硬约束（违反即返工）
 
@@ -66,7 +78,8 @@
   不得放大（会发虚）；已有 `@2x` / `@3x`。
 - 六爻盘面版式必须与原项目 `MobileHexagramPoster` 等价；盘面只呈现确定性排盘，不标用神、不印吉凶。
 - 解卦 prompt：400–550 字，硬上限 600；四段 = 取用 / 盘面 / 走势 / 应期。
-- 密钥只放 `.llm.local`（已 gitignore），不进仓库、不进 D1。
+- 大模型 key **只存用户本机 localStorage**，随请求体转发一次，不落库、不写日志、不回显；
+  自建部署的 env 兜底 key 只放 `.llm.local`（已 gitignore），不进仓库、不进 D1。
 - 不得修改 `C:\Users\奇哥\Desktop\bazi-web` 源码（只允许读取 / 复制）。
 - 部署目标是 Cloudflare Workers，但**暂不部署**；`npm run check:portability` 必须保持通过。
 
@@ -75,7 +88,7 @@
 ```bash
 npm run dev:vinext     # 3001，带 D1 绑定（改完后端/接口用这个验证）
 npm run dev:bg         # 后台 + logs/dev.out.log
-npm run check          # schema + portability + 94 测试
+npm run check          # schema + portability + 78 测试
 npm run build && npm run build:vinext
 ```
 

@@ -60,40 +60,22 @@ lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
 tests/                  差分基准与引擎自证
 ```
 
-## 解卦
+## 解卦与大模型设置
 
-六爻盘面下方有「解 卦」入口：只把**盘面事实**（含十三神煞与卦爻辞）发到服务端，
-prompt 在服务端拼、密钥只在服务端，流式返回四段式解读（取用 / 盘面 / 走势 / 应期）。
-UI 取纸上批注的克制排版；可查看「所呈事实」，确认没有多传东西。
+盘面下方有「解 卦」入口：只把**盘面事实**（含十三神煞与卦爻辞）发到本站 `/api/read`，
+prompt 在服务端拼装，流式返回四段式解读（取用 / 盘面 / 走势 / 应期）。
+UI 取纸上批注的克制排版；可展开「所呈事实」核对到底发送了什么。
 
-- 未配置 LLM 时返回 501，不会假装解读。
-- 后台 `/admin` → 「LLM 切换」里配置 provider、模型、思考模式与强度；密钥本身只进服务端环境变量。
-- 本地密钥放 `.llm.local`（已 gitignore），启动脚本会加载它。
-- 当前默认：opencode 网关 · `deepseek-v4.1-flash` · 思考模式 high；输出 400–550 字（硬上限 600），
-  四段固定为取用 / 盘面 / 走势 / 应期，涉及病症时启用病占专项。
+**大模型由用户自带**，全站只有一处设置：右上角「设置」。
 
-## 公告与统计
-
-页面仍是静态的，公告与统计配置由 `/api/site-config` 在客户端拉取：
-
-- 公告条：后台启用后全站顶部出现，可按 `updatedAt` 关闭；接口失败不显示，不影响排盘。
-- 统计：只接受结构化配置（Cloudflare Web Analytics / Umami / Plausible），运行时注入
-  `<script>`；不接任意 JS snippet。
-
-## 后台（`/admin`）
-
-公告 · LLM 切换 · 流量统计配置 · 审计。数据存 D1（本地用 miniflare），
-密钥只放服务端环境变量（profile 里只填变量名）。
-
-```bash
-npm run dev:vinext   # http://localhost:3001/admin  （本地 D1；开发默认口令 dev-admin）
-npm run dev          # 无绑定，后台是内存模式（界面会标明）
-```
-
-- 口令：`ADMIN_PASSWORD` + 会话密钥 `ADMIN_SESSION_SECRET`；生产缺一即 503。
-- 开发默认口令只对本机 hostname 生效，线上域名不会启用。
-- 结构见 [docs/cloudflare.md](docs/cloudflare.md) 第八节；schema 在 `migrations/*.sql`，
-  `npm run gen:schema` 生成运行时建表常量，`npm run check` 校验一致性 + 可移植性 + 测试。
+- 配置**只保存在本机浏览器**（`localStorage['liuyao.llm.v1']`），不上传、不入库；
+  每次解卦随请求体带上，服务端只做一次转发，不落库、不写日志。
+- 通用「OpenAI 兼容」协议：预置 DeepSeek / OpenAI / Moonshot / 智谱 / 通义 / OpenRouter /
+  SiliconFlow / Ollama（本机，可无 key），也可自定义任意网关（填到 `/v1` 为止）。
+- 「测试连接」会打一次极短请求，直接看到上游返回或报错。
+- 没配时会明确提示去「设置」，不会假装解读。
+- 自建/私人部署仍可用服务端环境变量兜底：`LLM_API_KEY`（可选 `LLM_BASE_URL` / `LLM_MODEL` /
+  `LLM_THINKING` / `LLM_REASONING_EFFORT`）；本地密钥放 `.llm.local`（已 gitignore）。
 
 ## 六爻盘面版式
 
@@ -137,10 +119,11 @@ npm test
   换浏览器/清 Cookie 会得到新的卦例夹（跨设备需以后接账号）。
 - `lib/readings/`：解卦**事实契约**（客户端只发盘面事实与问句）。
   `app/api/read/route.ts` 是服务端流式代理：prompt 在服务端拼（`route` 同目录 `prompt.ts`），
-  密钥只在服务端 env/secret，未配置时明确返回 501。
+  大模型配置由请求体带上（`lib/llm/server.ts` 校验 + 拦内网地址），没配时明确返回 501。
+- `lib/llm/`：用户侧大模型设置（供应商预设、校验、localStorage 读写）与同源转发校验。
 - `scripts/check-portability.mjs`：`npm run check:portability` 守住 Workers 兼容性
   （禁 `fs`/`node:*`、`next/image`、`next/font`、锁死 `output: 'export'`）。
-- 目标与约束、后台规划、部署触发条件见 [docs/cloudflare.md](docs/cloudflare.md)。
+- 目标与约束、部署触发条件见 [docs/cloudflare.md](docs/cloudflare.md)。
 
 ## 刻意不做的事
 

@@ -12,6 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReadingFacts } from '@/lib/readings/types';
+import { isLlmConfigured, llmRequestPayload, loadLlmSettings } from '@/lib/llm/settings';
 
 type Phase = 'idle' | 'streaming' | 'done' | 'error';
 
@@ -151,6 +152,14 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
   }, [phase]);
 
   const run = useCallback(async () => {
+    // 大模型配置只在用户本机浏览器里；没配就先让去右上角「设置」，别发空请求
+    const settings = loadLlmSettings();
+    if (!isLlmConfigured(settings)) {
+      setError('还没有配置大模型：点右上角「设置」，填入接口地址、模型与 API Key（只保存在本机浏览器）。');
+      setPhase('error');
+      return;
+    }
+
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -166,7 +175,7 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
       const res = await fetch('/api/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ facts }),
+        body: JSON.stringify({ facts, llm: settings ? llmRequestPayload(settings) : undefined }),
         signal: ctrl.signal,
       });
 
@@ -295,7 +304,7 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
           <div className="mt-4 space-y-1.5 font-serif text-[12px] leading-relaxed text-[#8e3a2c]">
             <p>{error}</p>
             <p className="text-[11px] text-[#9C907F]">
-              若提示未配置，请到 /admin 的「LLM 切换」里选一个已配好密钥的 profile。
+              检查右上角「设置」里的接口地址、模型名与 API Key；「测试连接」能直接看到上游返回。
             </p>
           </div>
         )}

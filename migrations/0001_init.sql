@@ -1,24 +1,8 @@
 -- 0001_init.sql
--- 后台与共享状态的初始表结构（Cloudflare D1 / SQLite）
+-- 卦例表（Cloudflare D1 / SQLite）
 -- 约定：所有时间用 ISO-8601 字符串；JSON 以 TEXT 存储。
-
-CREATE TABLE IF NOT EXISTS settings (
-  key        TEXT PRIMARY KEY,
-  value      TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  updated_by TEXT NOT NULL DEFAULT 'system'
-);
-
-CREATE TABLE IF NOT EXISTS llm_profiles (
-  id         TEXT PRIMARY KEY,
-  label      TEXT NOT NULL,
-  base_url   TEXT NOT NULL,
-  model      TEXT NOT NULL,
-  key_env    TEXT NOT NULL,
-  enabled    INTEGER NOT NULL DEFAULT 1,
-  sort       INTEGER NOT NULL DEFAULT 0,
-  updated_at TEXT NOT NULL
-);
+-- 说明：后台（settings / llm_profiles / admin_audit）已下线，
+-- 大模型配置改由用户自带、只存在本机浏览器，服务端不落库。
 
 CREATE TABLE IF NOT EXISTS cases (
   id           TEXT PRIMARY KEY,
@@ -34,13 +18,3 @@ CREATE TABLE IF NOT EXISTS cases (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cases_owner_created ON cases (owner_id, created_at DESC);
-
-CREATE TABLE IF NOT EXISTS admin_audit (
-  id     INTEGER PRIMARY KEY AUTOINCREMENT,
-  at     TEXT NOT NULL,
-  actor  TEXT NOT NULL,
-  action TEXT NOT NULL,
-  detail TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_admin_audit_at ON admin_audit (at DESC);

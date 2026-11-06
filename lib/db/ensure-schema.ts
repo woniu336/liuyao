@@ -1,5 +1,5 @@
 import { SCHEMA_STATEMENTS } from './schema.generated';
-import type { D1Like } from '@/lib/admin/store/d1-types';
+import type { D1Like } from '@/lib/db/d1-types';
 
 const ensured = new WeakSet<object>();
 
