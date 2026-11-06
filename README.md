@@ -132,6 +132,8 @@ npm test
 - 每例的「排盘」由卦名反推六次投掷（6/7/8/9），再取一个与古例**同月建、同日辰**的公历时刻
   （古例不记年，脚本在 1990–2026 里找最早的同组合日），点开即是与原例一致的盘面。
 - 原例缺月建或干支的极少数条目不给排盘入口，页面上注明原因。
+- 版式：桌面端右侧吸顶侧栏（检索 / 六冲·六合·游魂·归魂 快筛 / 页码 / 读法 / 配色），
+  每例一张卡（卦盘独立成块、原注按句断段、三条断语各成一卡）；配色可切「暖纸 / 冷白」，记在本机。
 - 重新生成：`node scripts/extract-zengshan-cases.mjs <源txt> 100`。
 - `scripts/check-portability.mjs`：`npm run check:portability` 守住 Workers 兼容性
   （禁 `fs`/`node:*`、`next/image`、`next/font`、锁死 `output: 'export'`）。

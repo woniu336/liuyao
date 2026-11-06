@@ -36,6 +36,8 @@ export interface SiteHeaderProps {
   className?: string;
   /** 内容最大宽度，默认 1120 */
   maxWidthClassName?: string;
+  /** 页头色调：默认暖纸；cool 用于冷白阅读页 */
+  tone?: 'warm' | 'cool';
 }
 
 export default function SiteHeader({
@@ -45,7 +47,9 @@ export default function SiteHeader({
   sticky = false,
   className = '',
   maxWidthClassName = 'max-w-[1120px]',
+  tone = 'warm',
 }: SiteHeaderProps) {
+  const cool = tone === 'cool';
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   // 页头有 backdrop-blur（会成为 fixed 后代的包含块），弹窗必须挂到 body 上
@@ -55,7 +59,7 @@ export default function SiteHeader({
     <header
       className={[
         sticky ? 'safe-top sticky top-0 z-30' : 'relative z-20',
-        'border-b border-[#C8BEA8]/60 bg-[#F6F2E9]/92 backdrop-blur-sm',
+        cool ? 'border-b border-[#DCE3E5] bg-[#F7F9FA]/92 backdrop-blur-sm' : 'border-b border-[#C8BEA8]/60 bg-[#F6F2E9]/92 backdrop-blur-sm',
         className,
       ]
         .filter(Boolean)
@@ -65,7 +69,10 @@ export default function SiteHeader({
         className={`mx-auto flex h-[54px] w-full ${maxWidthClassName} items-center justify-between gap-3 px-4 sm:px-6 lg:px-8`}
       >
         <Link href="/" className="flex shrink-0 items-center text-[#35443D] no-underline">
-          <span className="font-brand text-[21px] leading-none tracking-[0.1em] text-[#2F4438] sm:text-[23px]">
+          <span
+            className="font-brand text-[21px] leading-none tracking-[0.1em] sm:text-[23px]"
+            style={{ color: cool ? '#1D2326' : '#2F4438' }}
+          >
             野鹤六爻
           </span>
         </Link>

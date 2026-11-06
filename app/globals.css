@@ -261,6 +261,27 @@ textarea::placeholder {
   font-weight: 400;
 }
 
+/* 案例页卦盘列宽：窄屏收紧到整盘放得下，宽屏再放宽一点 */
+.ex-chart {
+  --col-god: 26px;
+  --col-hidden: 62px;
+  --col-yao: 34px;
+  --col-najia: 74px;
+  --col-mark: 20px;
+  --col-move: 20px;
+  --col-gap: 4px;
+}
+@media (min-width: 640px) {
+  .ex-chart {
+    --col-hidden: 66px;
+    --col-yao: 38px;
+    --col-najia: 82px;
+    --col-mark: 22px;
+    --col-move: 24px;
+    --col-gap: 6px;
+  }
+}
+
 /* 隐藏原生日期选择器图标（起卦时间改用「修改」文字按钮唤起） */
 .no-native-picker::-webkit-calendar-picker-indicator {
   display: none;
