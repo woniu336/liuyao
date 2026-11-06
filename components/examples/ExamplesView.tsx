@@ -98,7 +98,8 @@ function YaoBar({ yang, tone }: { yang: boolean; tone: string }) {
 const GAP = 4;
 const W = { god: 28, hidden: 56, yao: 34, najia: 74, mark: 18, move: 22 } as const;
 
-/** 卦盘：照书的列次排（六神 / 伏神 / 本卦 / 世应 / 动 / 变卦 / 世应） */
+/** 卦盘：照书的列次排（六神 / 伏神 / 本卦 / 世应 / 动 / 变卦 / 世应）
+ *  用 CSS grid 统一列宽，表头的「本卦 / 变卦」正好压在自己那两列（爻画 + 纳甲）之上。 */
 function CaseChart({ chart }: { chart: LiuyaoChart }) {
   const lines = useMemo(() => [...chart.lines].sort((a, b) => b.position - a.position), [chart.lines]);
   const changed = chart.changedLines;
@@ -106,48 +107,63 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
   const changedResponse = changedWorld ? ((changedWorld + 2) % 6) + 1 : null;
   const hasHidden = lines.some((l) => l.hiddenSpirit);
 
+  const cols = [
+    `${W.god}px`,
+    ...(hasHidden ? [`${W.hidden}px`] : []),
+    `${W.yao}px`,
+    `${W.najia}px`,
+    `${W.mark}px`,
+    `${W.move}px`,
+    `${W.yao}px`,
+    `${W.najia}px`,
+    `${W.mark}px`,
+  ];
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: cols.join(' '),
+    columnGap: GAP,
+    alignItems: 'center',
+  };
+
   const row = (l: LiuyaoLine) => {
     const ch = changed?.[l.position - 1];
     const h = l.hiddenSpirit;
     return (
       <div
         key={l.position}
-        className="flex items-center py-[5px]"
+        className="py-[5px]"
         style={{
-          gap: GAP,
+          ...gridStyle,
           ...(l.isMoving ? { background: 'rgba(194,58,43,0.05)' } : null),
         }}
       >
-        <span style={{ width: W.god, color: MUTED }} className="shrink-0 text-[11px]">
+        <span style={{ color: MUTED }} className="text-[11px]">
           {l.sixGod}
         </span>
         {hasHidden && (
-          <span
-            style={{ width: W.hidden, color: '#A9793F' }}
-            className="hidden shrink-0 truncate text-[10.5px] sm:block"
-          >
+          <span style={{ color: '#A9793F' }} className="hidden truncate text-[10.5px] sm:block">
             {h ? `${h.relation}${h.stemBranch}` : ''}
           </span>
         )}
-        <span style={{ width: W.yao }} className="flex shrink-0 justify-start">
+        <span className="flex justify-start">
           <YaoBar yang={l.isYang} tone={INK} />
         </span>
-        <span style={{ width: W.najia, color: INK }} className="shrink-0 text-[12px]">
+        <span style={{ color: INK }} className="text-[12px]">
           {`${l.relation}${l.stem}${l.branch}${l.element}`}
         </span>
-        <span style={{ width: W.mark, color: ACCENT }} className="shrink-0 text-center text-[11px]">
+        <span style={{ color: ACCENT }} className="text-center text-[11px]">
           {l.isWorld ? '世' : l.isResponse ? '应' : ''}
         </span>
-        <span style={{ width: W.move, color: ACCENT }} className="shrink-0 text-center text-[11px]">
+        <span style={{ color: ACCENT }} className="text-center text-[11px]">
           {l.isMoving ? (l.isYang ? '○→' : '×→') : ''}
         </span>
-        <span style={{ width: W.yao }} className="flex shrink-0 justify-start">
+        <span className="flex justify-start">
           {ch ? <YaoBar yang={l.isMoving ? !l.isYang : l.isYang} tone="#5E564D" /> : null}
         </span>
-        <span style={{ width: W.najia, color: BODY }} className="shrink-0 text-[12px]">
+        <span style={{ color: BODY }} className="text-[12px]">
           {ch ? `${ch.relation}${ch.stem}${ch.branch}${ch.element}` : ''}
         </span>
-        <span style={{ width: W.mark, color: ACCENT }} className="shrink-0 text-center text-[11px]">
+        <span style={{ color: ACCENT }} className="text-center text-[11px]">
           {ch ? (l.position === changedWorld ? '世' : l.position === changedResponse ? '应' : '') : ''}
         </span>
       </div>
@@ -171,22 +187,14 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
           )}
         </div>
 
-        {/* 列名：本卦 / 变卦 各跨三列 */}
-        <div className="mt-1 flex items-end pb-1 text-[10.5px]" style={{ color: MUTED, gap: GAP }}>
-          <span style={{ width: W.god }} className="shrink-0">
-            六神
-          </span>
-          {hasHidden && (
-            <span style={{ width: W.hidden }} className="hidden shrink-0 sm:block">
-              伏神
-            </span>
-          )}
-          <span style={{ width: W.yao + W.najia + W.mark + W.move + GAP * 3 }} className="shrink-0 text-center">
-            【本　　卦】
-          </span>
-          <span style={{ width: W.yao + W.najia + W.mark + GAP * 2 }} className="shrink-0 text-center">
-            【变　　卦】
-          </span>
+        {/* 列名：本卦 / 变卦 各压在「爻画 + 纳甲」两列之上 */}
+        <div className="pb-1 text-[10.5px]" style={{ ...gridStyle, color: MUTED }}>
+          <span>六神</span>
+          {hasHidden && <span className="hidden sm:block">伏神</span>}
+          <span className="col-span-2 text-center">【本　　卦】</span>
+          <span className="col-span-2" />
+          <span className="col-span-2 text-center">【变　　卦】</span>
+          <span />
         </div>
 
         <div className="border-t pt-1" style={{ borderColor: `${INK}55` }}>
@@ -200,43 +208,6 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
 function CaseCard({ c }: { c: ExampleCase }) {
   const chart = useMemo(() => buildChart(c), [c]);
   const href = chartHref(c);
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    const rows = chart
-      ? [...chart.lines]
-          .sort((a, b) => b.position - a.position)
-          .map((l) => {
-            const ch = chart.changedLines?.[l.position - 1];
-            const h = l.hiddenSpirit ? `${l.hiddenSpirit.relation}${l.hiddenSpirit.stemBranch}` : '';
-            return `${l.sixGod}\t${h}\t${l.isYang ? '▅▅▅▅▅' : '▅▅　▅▅'}\t${l.relation}${l.stem}${l.branch}${l.element}\t${
-              l.isWorld ? '世' : l.isResponse ? '应' : ''
-            }\t${l.isMoving ? (l.isYang ? '○→' : '×→') : ''}\t${ch ? `${ch.relation}${ch.stem}${ch.branch}${ch.element}` : ''}`
-          })
-          .join('\n')
-      : '';
-    const text = [
-      `例${c.id}　古筮知识：${c.topic}`,
-      `${c.ganzhi}，${c.question}，得「${c.guaPair}」`,
-      `干支：${c.ganzhi}${c.void ? `　（旬空：${c.void}）` : ''}`,
-      rows,
-      c.note ? `原注：${c.note}` : '',
-      c.yong ? `1、选取用神：${c.yong}` : '',
-      c.luck ? `2、吉凶判断：${c.luck}` : '',
-      c.timing ? `3、应期细节：${c.timing}` : '',
-      '—— 野鹤六爻 · 案例（卦盘由确定性引擎重排）',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      /* 隐私模式：忽略 */
-    }
-  };
-
   return (
     <article className="rounded-[14px] border px-4 py-4 sm:px-5 sm:py-5" style={{ borderColor: HAIR, background: CARD }}>
       {/* 例N + 古筮知识 */}
@@ -311,14 +282,6 @@ function CaseCard({ c }: { c: ExampleCase }) {
             排出此卦 · 看完整盘面
           </a>
         ) : null}
-        <button
-          type="button"
-          onClick={() => void copy()}
-          className="press inline-flex h-9 items-center justify-center rounded-[8px] border px-4 text-[12.5px]"
-          style={{ borderColor: HAIR, color: BODY }}
-        >
-          {copied ? '已复制' : '复制此例'}
-        </button>
         {c.solar && (
           <span className="text-[10.5px]" style={{ color: MUTED }}>
             对应公历 {c.solar.replace('T', ' ')}（同月建、同日辰）
