@@ -95,8 +95,6 @@ function YaoBar({ yang, tone }: { yang: boolean; tone: string }) {
   );
 }
 
-const GAP = 4;
-const W = { god: 28, hidden: 56, yao: 34, najia: 74, mark: 18, move: 22 } as const;
 
 /** 卦盘：照书的列次排（六神 / 伏神 / 本卦 / 世应 / 动 / 变卦 / 世应）
  *  用 CSS grid 统一列宽，表头的「本卦 / 变卦」正好压在自己那两列（爻画 + 纳甲）之上。 */
@@ -105,25 +103,13 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
   const changed = chart.changedLines;
   const changedWorld = chart.changed?.generation ?? null;
   const changedResponse = changedWorld ? ((changedWorld + 2) % 6) + 1 : null;
-  const hasHidden = lines.some((l) => l.hiddenSpirit);
+  const hiddenList = lines
+    .filter((l) => l.hiddenSpirit)
+    .map((l) => ({ position: l.position, text: `${l.hiddenSpirit?.relation}${l.hiddenSpirit?.stemBranch}` }));
+  const hasHidden = hiddenList.length > 0;
 
-  const cols = [
-    `${W.god}px`,
-    ...(hasHidden ? [`${W.hidden}px`] : []),
-    `${W.yao}px`,
-    `${W.najia}px`,
-    `${W.mark}px`,
-    `${W.move}px`,
-    `${W.yao}px`,
-    `${W.najia}px`,
-    `${W.mark}px`,
-  ];
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: cols.join(' '),
-    columnGap: GAP,
-    alignItems: 'center',
-  };
+  const gridClass = 'ex-grid';
+  const hiddenAttr = hasHidden ? '1' : '0';
 
   const row = (l: LiuyaoLine) => {
     const ch = changed?.[l.position - 1];
@@ -131,11 +117,9 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
     return (
       <div
         key={l.position}
-        className="py-[5px]"
-        style={{
-          ...gridStyle,
-          ...(l.isMoving ? { background: 'rgba(194,58,43,0.05)' } : null),
-        }}
+        className={`${gridClass} py-[5px]`}
+        data-hidden={hiddenAttr}
+        style={l.isMoving ? { background: 'rgba(194,58,43,0.05)' } : undefined}
       >
         <span style={{ color: MUTED }} className="text-[11px]">
           {l.sixGod}
@@ -188,7 +172,7 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
         </div>
 
         {/* 列名：本卦 / 变卦 各压在「爻画 + 纳甲」两列之上 */}
-        <div className="pb-1 text-[10.5px]" style={{ ...gridStyle, color: MUTED }}>
+        <div className={`${gridClass} pb-1 text-[10.5px]`} data-hidden={hiddenAttr} style={{ color: MUTED }}>
           <span>六神</span>
           {hasHidden && <span className="hidden sm:block">伏神</span>}
           <span className="col-span-2 text-center">【本　　卦】</span>
@@ -200,6 +184,13 @@ function CaseChart({ chart }: { chart: LiuyaoChart }) {
         <div className="border-t pt-1" style={{ borderColor: `${INK}55` }}>
           {lines.map(row)}
         </div>
+
+        {/* 窄屏收起伏神列，改在表下注一行 */}
+        {hasHidden && (
+          <p className="mt-1.5 text-[10.5px] leading-relaxed sm:hidden" style={{ color: '#A9793F' }}>
+            伏神：{hiddenList.map((x) => `${x.text}（${x.position}爻）`).join('　')}
+          </p>
+        )}
       </div>
     </div>
   );

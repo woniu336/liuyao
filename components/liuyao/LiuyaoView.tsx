@@ -181,15 +181,18 @@ export default function LiuyaoView() {
   const manualComplete = manual.every((v): v is CoinResult => v !== null);
 
   /**
-   * 带起卦参数进来时先占位，等复原完成再渲染表单。
-   * 判定放在 layout effect 里（不在 render 里读 window），否则 SSR 与客户端首帧不一致会触发 hydration 报错。
+   * 三态门：boot（首帧，静态页 SSR 出来的就是它）→ restoring（带参数，正在复原）/ form（无参数，旧表单）。
+   *
+   * 为什么要有 boot：本页是静态预渲染，SSR 出来的 HTML 只能是「起卦表单」；
+   * 从案例 / 历史排盘带 ?c=… 进来时，若不先挡一层，会先闪一下那张过期表单再跳到盘面。
+   * 判定放在 layout effect 里（不在 render 里读 window），SSR 与客户端首帧因此一致，不会 hydration 报错。
    */
-  const [hasCastParams, setHasCastParams] = useState(false);
+  const [phase, setPhase] = useState<'boot' | 'restoring' | 'form'>('boot');
   useIsoLayoutEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    if (p.has('c') || p.has('case')) setHasCastParams(true);
+    setPhase(p.has('c') || p.has('case') ? 'restoring' : 'form');
   }, []);
-  const awaitingRestore = !result && !restoreSettled && hasCastParams;
+  const awaitingRestore = !result && !restoreSettled && phase === 'restoring';
 
   // ───────────────────────── 盘面（原项目结果页版式） ─────────────────────────
   if (boardProps && readingFacts) {
@@ -204,11 +207,11 @@ export default function LiuyaoView() {
     );
   }
 
-  // 复原中：给一张空白纸，不闪表单
-  if (awaitingRestore) {
+  // 首帧 / 复原中：给一张空白纸，绝不先闪出旧表单
+  if (phase === 'boot' || awaitingRestore) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F4F1E8] font-song text-[12.5px] tracking-[0.2em] text-[#8C8272]">
-        排盘中…
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-[#F4F1E8] font-song text-[12.5px] tracking-[0.2em] text-[#8C8272]">
+        <span>{phase === 'boot' ? '载入中…' : '排盘中…'}</span>
       </div>
     );
   }

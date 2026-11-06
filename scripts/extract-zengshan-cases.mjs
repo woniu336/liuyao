@@ -126,7 +126,7 @@ for (let i = 1; i < parts.length && cases.length < LIMIT; i += 2) {
   const sec = (n) => {
     const re = new RegExp(`${n}、[^：]*：([\\s\\S]*?)(?=\\n\\s*[123]、|$)`);
     const m = body.match(re);
-    return m ? clip(m[1], 150) : '';
+    return m ? m[1].replace(/\s+/g, ' ').trim() : '';
   };
 
   const benBinary = binaryOfName(hexes[0]?.name ?? '');
@@ -149,7 +149,7 @@ for (let i = 1; i < parts.length && cases.length < LIMIT; i += 2) {
     zhi: hexes[1]?.name ?? '',
     zhiPalace: hexes[1]?.palace ?? '',
     zhiTag: hexes[1]?.tag ?? '',
-    note: noteMatch ? clip(noteMatch[1], 200) : '',
+    note: noteMatch ? noteMatch[1].replace(/\s+/g, ' ').trim() : '',
     yong: sec(1),
     luck: sec(2),
     timing: sec(3),

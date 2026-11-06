@@ -261,24 +261,19 @@ textarea::placeholder {
   font-weight: 400;
 }
 
-/* 案例页卦盘列宽：窄屏收紧到整盘放得下，宽屏再放宽一点 */
-.ex-chart {
-  --col-god: 26px;
-  --col-hidden: 62px;
-  --col-yao: 34px;
-  --col-najia: 74px;
-  --col-mark: 20px;
-  --col-move: 20px;
-  --col-gap: 4px;
+/* 案例页卦盘：表头与数据行共用同一套列宽（有伏神时多一列，窄屏收起该列） */
+.ex-grid {
+  display: grid;
+  column-gap: 4px;
+  align-items: center;
+  grid-template-columns: 28px 34px 74px 18px 22px 34px 74px 18px;
 }
-@media (min-width: 640px) {
-  .ex-chart {
-    --col-hidden: 66px;
-    --col-yao: 38px;
-    --col-najia: 82px;
-    --col-mark: 22px;
-    --col-move: 24px;
-    --col-gap: 6px;
+.ex-grid[data-hidden='1'] {
+  grid-template-columns: 28px 56px 34px 74px 18px 22px 34px 74px 18px;
+}
+@media (max-width: 639px) {
+  .ex-grid[data-hidden='1'] {
+    grid-template-columns: 28px 34px 74px 18px 22px 34px 74px 18px;
   }
 }
 
