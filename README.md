@@ -1,166 +1,297 @@
-# 易林寻踪 · 六爻确定性排盘
+# 野鹤六爻 · 六爻确定性排盘
 
-从 [bazi-web](https://github.com/woniu336/bazi-web) 抽出的六爻排盘工具，单进程跑：
+三钱摇卦 · 纳甲装卦 · 世应六亲 · 十三神煞 · 四段解卦，附《增删卜易》卦例 100 例研读。
+排盘由确定性引擎计算，解读依盘面事实展开；大模型由用户自带（key 只存本机浏览器）。
 
-| 工具 | 保留 | 移除 |
+- 线上：<https://zhanbu.lufei.de>
+- 技术栈：Next.js 16（App Router）+ vinext / Cloudflare Workers + D1 + PWA
+- 引擎与 [bazi-web](https://github.com/woniu336/bazi-web) 同源：`lib/liuyao/najia.ts` 与参考实现
+  4696 案 SHA-256 差分全一致（`tests/liuyao-parity.test.ts`）
+
+| 页面 | 内容 |
+| --- | --- |
+| `/` 起卦 | 所问 / 性别 / 时间 + 三钱摇卦（Web Crypto）· 可手动指定本卦变卦 · 移动端底部悬浮起卦 |
+| `/liuyao` 排盘 | 纳甲、安世应、定六亲、旬空、伏神、六神、月卦身、十三神煞；四段解卦（取用 / 盘面 / 走势 / 应期） |
+| `/examples` 案例 | 《增删卜易》卦例 100 例：古筮知识 / 原注 / 用神·吉凶·应期；每例可一键还原盘面 |
+| `/cases` 历史排盘 | 只存起卦输入，打开时由引擎重排同一卦 |
+| `/classics` 古籍 | 周易经传与象数文献入口（原文核校后逐步加入） |
+
+> 本文即是**部署文档**：从零把本项目部署到 Cloudflare Workers + D1 + 自有域名。
+> 更深的取舍与约束见 [docs/cloudflare.md](docs/cloudflare.md)，开发交接见 [NEXT.md](NEXT.md)。
+
+---
+
+## 0. 先决条件
+
+| 项 | 要求 | 说明 |
 | --- | --- | --- |
-| **首页**（`/`） | 求测事项 / 性别 / 婚否 / 时间 + 三钱摇卦；可手动指定本卦/变卦 | 起卦 UI 不藏求测人与时间信息 |
-| **六爻**（`/liuyao`） | 纳甲装卦、安世应、定六亲、旬空、伏神、六神、月卦身、十三神煞；可请求禅意解读 | 模型不重排盘，只解释确定性事实 |
-| **案例**（`/examples`） | 《增删卜易》卦例 100 例：古筮知识 / 原注 / 用神·吉凶·应期要点；每例可一键还原盘面 | 只摘录原文，不作现成断语 |
-| **易学典籍**（`/classics`） | 周易经传与象数文献入口 / 分类框架 | 原文与版本核校后逐步加入 |
+| Node.js | ≥ 20（推荐 22） | 构建与 CLI |
+| Cloudflare 账号 | 免费即可 | Workers / D1 / 自定义域名都在免费额度内 |
+| 域名 | 已托管在同一个 CF 账号 | 否则无法用 Custom Domain 绑定 |
+| `cf` CLI | `npm i -g cf` | 新版官方 CLI（也可以用 `npx cf`） |
 
-排盘由确定性引擎负责；解读依盘面事实展开，不重排、不改写盘面。问句用于表达所问与解读上下文，不参与物理排盘计算。
+```bash
+node -v          # v22.x
+npm i -g cf
+cf --version
+```
 
-## 起卦首页与视觉
-
-首页参考用户提供的 `设计参考.txt` 与设计图：顶部导航「六爻 / 古籍 / 历史排盘」、
-淡墨山水、宣纸求测笺与真铜钱摇卦。页首只保留「取象于天地，观变于阴阳」，标题区较短。
-
-- 求测事项、性别、婚否、时间都在明面；婚否只作落款记录。
-- 三枚铜钱用 `coin-4`（字）/ `coin-3`（背）真图，保持原设计尺寸（移动约 74px / 宽屏 84px）；
-  使用 2x/3x sourceSet，Web Crypto 掷币，动画落定后提交结果。
-- 爻象生成台排在铜钱下方；手动指定为可输入的六十四卦下拉（全名/简称均可搜），动爻自动比对。
-- 手机单列，PC 使用更宽的居中宣纸卡；三枚铜钱、字段、爻象保持在同一中轴。
-- `/classics` 已预留周易经传与易学典籍入口，当前是分类/来源校核空态，原文按来源与版本核验后再加入。
-
-> 部署到 Cloudflare 的完整步骤（登录 / D1 / 域名 / 验收 / 限流 / 回滚）：见 [docs/deploy.md](docs/deploy.md)。
-> 正在做的下一批任务与交接上下文：见 [NEXT.md](NEXT.md)。
-
-## 跑起来
+本地先跑通一次（可选但强烈建议）：
 
 ```bash
 npm install
-npm run dev          # 前台：http://localhost:3000
-npm run dev:bg       # 后台：日志写 logs/dev.out.log，按端口重启旧进程
-npm test             # 引擎自证 + 差分对齐（见下）
-
-# Cloudflare Workers 回路（分支 spike/vinext 验证通过；M1 起成为部署目标）
-npm run dev:vinext      # vite dev（workerd，带本地 D1 绑定）
-npm run build:vinext    # vite build
-npm run start:vinext    # vite preview（生产包本地验证）
-npm run deploy:vinext   # 需要先 cf auth login
+npm run dev:vinext      # http://localhost:3001，workerd + 本地 D1
+npm run check           # schema + portability + 测试
 ```
 
-`npm run dev/build` 走 `scripts/next.mjs`：先清掉宿主进程可能泄漏进来的
-`__NEXT_PRIVATE_STANDALONE_CONFIG` 等私有变量再启动 Next。不清的话，
-这些变量会被当成真实配置读入（distDir 被改写、outputFileTracingRoot 指到不存在的路径），
-表现为 dev 起不来或 build 报 `TypeError: generate is not a function`。
+---
 
-手机用局域网 IP 打开时，`next.config.ts` 会把本机所有非回环 IPv4 放进
-`allowedDevOrigins`。否则 Next 16 会拦掉 `/_next/static/chunks/*.js`，
-页面看着完整、按钮全部不动（React 没 hydration）。
-
-## 目录
-
-```
-app/                    首页 / 六爻页 / 历史排盘 / 古籍
-components/liuyao/      六爻：LiuyaoView（起卦表单）· CastWorkbench（三钱/大衍）· ManualCast · HexagramBoard（古法卦单）
-lib/liuyao/najia.ts     六爻确定性排盘引擎（core.py 的逐条移植）
-lib/liuyao/board-view.ts 引擎结果 → 盘面视图数据 + 复制文本
-lib/liuyao/ganzhi.ts    起卦时刻 → 四柱干支
-lib/hexagram/           六爻几何与 64 卦查表（矢量爻象用）
-tests/                  差分基准与引擎自证
-```
-
-## 解卦与大模型设置
-
-盘面下方有「解 卦」入口：只把**盘面事实**（含十三神煞与卦爻辞）发到本站 `/api/read`，
-prompt 在服务端拼装，流式返回四段式解读（取用 / 盘面 / 走势 / 应期）。
-UI 取纸上批注的克制排版；可展开「所呈事实」核对到底发送了什么。
-
-**大模型由用户自带**，全站只有一处设置：右上角「设置」。
-
-- 配置**只保存在本机浏览器**（`localStorage['liuyao.llm.v1']`），不上传、不入库；
-  每次解卦随请求体带上，服务端只做一次转发，不落库、不写日志。
-- 通用「OpenAI 兼容」协议：预置 DeepSeek / OpenAI / Moonshot / 智谱 / 通义 / OpenRouter /
-  SiliconFlow / Ollama（本机，可无 key），也可自定义任意网关（填到 `/v1` 为止）。
-- 「测试连接」会打一次极短请求，直接看到上游返回或报错。
-- 没配时会明确提示去「设置」，不会假装解读。
-- 自建/私人部署仍可用服务端环境变量兜底：`LLM_API_KEY`（可选 `LLM_BASE_URL` / `LLM_MODEL` /
-  `LLM_THINKING` / `LLM_REASONING_EFFORT`）；本地密钥放 `.llm.local`（已 gitignore）。
-
-## 六爻盘面版式
-
-`components/liuyao/HexagramBoard.tsx` 是 bazi-web `components/zhanbu/MobileHexagramPoster.tsx`
-embedded 分支的逐行搬运，只换数据来源：
-
-- 占问 + 男占/女占落款、时空看板（公历 / 月建+日辰 / 旬空 / 十三神煞）
-- 双卦对瞻表头（本卦 · 变卦，附归魂/游魂/六冲/六合）
-- 定宽栅格：六神 32 / 本卦纳甲 68 / 爻画 46 / 世应 18 / 动爻 22 / 变卦纳甲 68 / 变爻画 46 / 动变标签 52
-- 伏神就地引出 `↑伏神: 妻财子水`
-
-版式未靠目测：同一份盘面数据分别交给原组件与本仓库组件渲染 4 类卦例
-（初爻动附伏神 / 静卦 / 六爻全动 / 混杂多动），逐元素比对 DOM 结构、文本、相对几何与
-字号/字重/颜色，结果完全一致。问句与性别只作落款，不参与计算。
-
-
-## 六爻引擎的验证方式
-
-`lib/liuyao/najia.ts` 是对 bazi-web `src/engine/core.py::HexagramEngine` 的逐条移植。
-为了不靠"看起来对"，用原引擎生成差分基准再逐案比对：
+## 1. 登录 Cloudflare
 
 ```bash
-# 基准已提交在 tests/fixtures/python-baseline.json（4696 案，SHA-256 指纹）
-python tests/generate_python_baseline.py   # 需要 bazi-web 在同级目录；仅重建基准时用
-npm test
+cf auth login
 ```
 
-- 4096 种三钱投掷组合（固定丙午年 / 申月 / 己丑日 / 申时）
-- 600 组随机年/月/日/时 + 投掷（覆盖十神起例、神煞、旬空全干支）
-- 比对字段：本卦/变卦名、动爻、旬空、月卦身、驿马桃花禄神贵人、
-  六爻的纳甲/六亲/世应/六神/伏神（含飞伏生克描述）/动爻变出
+设备码流程：终端会给出一个链接和验证码，浏览器打开
+<https://dash.cloudflare.com/oauth2/device/verify> 输入验证码确认即可（5 分钟内有效）。
 
-新增的「天医（月建前一位）」「文昌（依日干）」不参与差分（原 core.py 没有），
-由 `tests/liuyao-engine.test.ts` 单独断言。
+```bash
+cf auth whoami     # 确认已登录
+cf auth list       # 查看本地 profile
+```
 
-## 服务端边界（为 Cloudflare 预留）
+> CI 或不想用浏览器授权时，也可以在环境变量里放 `CLOUDFLARE_API_TOKEN`（需要 Workers / D1 / Zone 权限）。
 
-- `lib/store/`：卦例存储接口（异步）—— 本地 localStorage / 远端 D1 两种实现。
-  `/cases` 里可收藏、打开复原（只存起卦输入，盘面由引擎重算）、删除。
-  接上 D1 后按**匿名设备 Cookie** 归属（`ly_device`），旧本地卦例首次访问自动迁移；
-  换浏览器/清 Cookie 会得到新的卦例夹（跨设备需以后接账号）。
-- `lib/readings/`：解卦**事实契约**（客户端只发盘面事实与问句）。
-  `app/api/read/route.ts` 是服务端流式代理：prompt 在服务端拼（`route` 同目录 `prompt.ts`），
-  大模型配置由请求体带上（`lib/llm/server.ts` 校验 + 拦内网地址），没配时明确返回 501。
-- `lib/llm/`：用户侧大模型设置（供应商预设、校验、localStorage 读写）与同源转发校验。
+---
 
-## 案例（`/examples`）
+## 2. 建 D1 数据库
 
-`public/data/zengshan-cases.json` 由 `scripts/extract-zengshan-cases.mjs` 从朱辰彬《增删卜易卦例初探》
-整理文本抽取（前 100 例）：例号 / 古筮知识 / 占问 / 干支旬空 / 本卦变卦 / 原注 / 用神·吉凶·应期要点，
-长段落截断，不改写。
+```bash
+cf d1 create --name liuyao-db
+```
 
-- 每例的「排盘」由卦名反推六次投掷（6/7/8/9），再取一个与古例**同月建、同日辰**的公历时刻
-  （古例不记年，脚本在 1990–2026 里找最早的同组合日），点开即是与原例一致的盘面。
-- 原例缺月建或干支的极少数条目不给排盘入口，页面上注明原因。
-- 版式：桌面端右侧吸顶侧栏（检索 / 六冲·六合·游魂·归魂 快筛 / 页码 / 读法 / 配色），
-  每例一张卡（卦盘独立成块、原注按句断段、三条断语各成一卡）；配色可切「暖纸 / 冷白」，记在本机。
-- 重新生成：`node scripts/extract-zengshan-cases.mjs <源txt> 100`。
-- `scripts/check-portability.mjs`：`npm run check:portability` 守住 Workers 兼容性
-  （禁 `fs`/`node:*`、`next/image`、`next/font`、锁死 `output: 'export'`）。
-- 目标与约束、部署触发条件见 [docs/cloudflare.md](docs/cloudflare.md)。
+会返回一个 `uuid`。**不用手工建表** —— 应用首次访问 `/api/cases` 时会惰性执行
+`migrations/0001_init.sql`（`CREATE TABLE IF NOT EXISTS cases ...`）。
 
-## 刻意不做的事
+想手动建也可以：
 
-- 盘面上不标用神、不印吉凶判词：断语只出现在「解卦」正文里，不压在确定性盘面上。
-- 不为个案写特例：引擎只有查表与确定性算法，没有 `if case_id == ...` 之类的补丁。
+```bash
+cf d1 query <uuid> --sql "$(cat migrations/0001_init.sql)"
+cf d1 query <uuid> --sql "SELECT name FROM sqlite_master WHERE type='table'"
+```
 
-## 起卦随机源（可核查）
+> 数据库名必须和 `cloudflare.config.ts` 里的 `bindings.d1({ name: 'liuyao-db' })` 一致。
+> 部署时 `--provision` 默认开启，D1 不存在会自动创建。
 
-起卦的每一次投掷都来自 **Web Crypto**（`crypto.getRandomValues`），不存在 `Math.random`：
+---
 
-- `lib/liuyao/random.ts`：逐位取 Uint32 最低有效位（2^32 可整除 2，天然无偏）；
-- 环境缺少 Web Crypto 时**直接报错**，不静默回落到 PRNG。
-- `/design` 页会实时跑 2000 掷并显示字/背占比与爻值偏差，可自行核对。
-- 测试（`tests/random.test.ts`）钉三件事：每次投掷都真的调用了 `getRandomValues`、
-  大样本分布通过卡方检验、起卦相关源码里不得出现 `Math.random`（注释除外）。
+## 3. 配置域名与变量
 
-独立核查（50 万掷）：字/背 = 750499 / 749501（字面 50.033%），
-卡方 字背 0.664（df=1，临界 3.84）、爻值 3.284（df=3，临界 7.81）—— 均通过。
+部署配置在 `cloudflare.config.ts`（TypeScript，有类型检查，写错字段会当场报错）。
 
-## 铜钱与布局
+### 3.1 自定义域名
 
-- 铜钱照片：`public/images/coin-4.png`（字面）/ `coin-3.png`（背面），
-  `components/liuyao/Coin.tsx` 用 3D `rotateY` 真翻转，落地由结果决定（正面 0°/背面 180°），
-  翻滚中靠静态薄环 + 落地阴影保持"三枚始终可数"，不会出现照片转到 90° 而"凭空消失"。
-- 布局：移动单栏；`lg`（≥1024）起为**案头两页**——左侧起卦与盘面（520px），右侧九宫与解卦（自适应）。
+用环境变量传，避免把域名写死在仓库里：
+
+```bash
+WORKER_DOMAIN=zhanbu.example.com npx cf deploy
+```
+
+配置里对应的是 **Custom Domain**（会自动建 DNS 记录 + 证书）：
+
+```ts
+...(workerDomain ? { domains: [workerDomain] } : {}),
+```
+
+> 注意：不要用 `triggers.fetch({ pattern })` 代替 —— 路由不会自动建 DNS 记录，
+> 会得到「部署成功但域名打不开」。Custom Domain 才是子域名的正确姿势。
+
+不设 `WORKER_DOMAIN` 就只挂 `*.workers.dev`（首次部署会问一次子域名）。
+
+### 3.2 运行时变量
+
+| 变量 | 必需 | 作用 |
+| --- | --- | --- |
+| `LLM_ALLOWED_HOSTS` | 有默认值 | 上游域名白名单（逗号分隔后缀）。默认已含 opencode.ai / deepseek.com / api.openai.com / api.moonshot.cn / open.bigmodel.cn / dashscope.aliyuncs.com / openrouter.ai / api.siliconflow.cn |
+| `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` | 否 | 服务端兜底模型（正常不需要：用户在页面「设置」里自带 key） |
+| `LLM_THINKING` / `LLM_REASONING_EFFORT` | 否 | 兜底模型的思考模式 / 强度 |
+
+**大模型 key 不需要配到服务端**：用户在右上角「设置」里填，只存自己浏览器的
+`localStorage['liuyao.llm.v1']`，解卦时随请求体发给 `/api/read`，服务端只转发一次。
+
+想改白名单，直接传环境变量即可覆盖默认值：
+
+```bash
+LLM_ALLOWED_HOSTS=opencode.ai,api.deepseek.com npx cf deploy
+```
+
+---
+
+## 4. 部署
+
+```bash
+WORKER_DOMAIN=zhanbu.example.com npx cf deploy
+```
+
+`cf deploy` 会先跑构建（`build:vinext`），再上传静态资源 + Worker。成功输出类似：
+
+```
+✨ Success! Uploaded 46 files
+Total Upload: 1553.77 KiB / gzip: 487.06 KiB
+Your Worker has access to the following bindings:
+  env.DB (liuyao-db)                       D1 Database
+  env.ASSETS                               Assets
+  env.LLM_ALLOWED_HOSTS ("opencode.ai,…")  Environment Variable
+Uploaded liuyao
+Deployed liuyao triggers
+  zhanbu.example.com (custom domain)
+◆  Deploy complete
+```
+
+只检查不发布（强烈建议首次先跑）：
+
+```bash
+WORKER_DOMAIN=zhanbu.example.com npx cf deploy --dry-run
+```
+
+---
+
+## 5. 上线验收清单
+
+```bash
+curl -I https://zhanbu.example.com/                     # 200
+curl -I https://zhanbu.example.com/examples             # 200
+curl -I https://zhanbu.example.com/cases                # 200
+curl -I https://zhanbu.example.com/manifest.webmanifest # 200（PWA）
+curl -I https://zhanbu.example.com/sw.js                # 200（离线壳）
+curl -I https://zhanbu.example.com/data/zengshan-cases.json  # 200（案例数据）
+```
+
+接口自检（应分别得到 501 / 403 / 403）：
+
+```bash
+# 1) 没配模型 → 501
+curl -s -X POST https://zhanbu.example.com/api/read \
+  -H 'Content-Type: application/json' -d '{"facts":{"kind":"liuyao","lines":[]}}'
+
+# 2) 跨站 Origin → 403
+curl -s -X POST https://zhanbu.example.com/api/read \
+  -H 'Content-Type: application/json' -H 'Origin: https://evil.example.com' \
+  -d '{"facts":{"kind":"liuyao","lines":[]}}'
+
+# 3) 白名单外上游 → 403
+curl -s -X POST https://zhanbu.example.com/api/read \
+  -H 'Content-Type: application/json' -H 'Origin: https://zhanbu.example.com' \
+  -d '{"facts":{"kind":"liuyao","lines":[]},"llm":{"baseUrl":"https://evil.example.com/v1","model":"x","apiKey":"k"}}'
+```
+
+D1 是否就绪：
+
+```bash
+cf d1 query <uuid> --sql "SELECT name FROM sqlite_master WHERE type='table'"
+# 应看到 cases
+```
+
+浏览器里再走一遍：起卦 → 排盘 → 设置里填模型 → 测试连接 → 解卦 → 历史排盘能回看。
+
+---
+
+## 6. 边缘限流（建议）
+
+免费套餐的限制：**每个 phase 只能 1 条规则、`period` 只能是 10 秒、不能用 `matches` 运算符**。
+所以规则只能写成「10 秒 N 次 + 路径包含」。
+
+```bash
+# 找到 zone 的 http_ratelimit 规则集
+cf rulesets list --zone example.com        # 取 phase=http_ratelimit 的 id
+
+# 规则文件（注意 characteristics 必须带 cf.colo.id；mitigation_timeout 只能为 0 或 ≥ period）
+cat > rl.json <<'EOF'
+[
+  {
+    "action": "block",
+    "description": "API 限流（10 秒内最多 4 次）",
+    "enabled": true,
+    "expression": "(http.request.uri.path contains \"/api/\")",
+    "ratelimit": {
+      "characteristics": ["ip.src", "cf.colo.id"],
+      "mitigation_timeout": 10,
+      "period": 10,
+      "requests_per_period": 4
+    }
+  }
+]
+EOF
+
+cf rulesets update <ruleset-id> --zone example.com --id <ruleset-id> --rules @rl.json
+```
+
+> 应用内还有一层：`/api/read` 8 次/分 + 60 次/时（进程内计数，只在单实例内准确）。
+> 想要「每分钟 / 每小时」粒度的边缘规则需要 Pro（Advanced Rate Limiting）。
+
+---
+
+## 7. 日常更新与回滚
+
+```bash
+git pull
+npm run check                                    # 先本地全绿
+WORKER_DOMAIN=zhanbu.example.com npx cf deploy   # 重新发布（秒级）
+```
+
+- **回滚**：`cf workers deployments list liuyao` 找到上一版本，
+  `cf workers deployments rollback liuyao`（或控制台 Workers → Deployments 一键回滚）。
+- **看日志**：`cf workers tail liuyao` 或控制台 Workers Logs。
+- **D1 备份**：`cf d1 export <uuid> --output backup.sql`（定期存一份）。
+
+---
+
+## 8. 常见坑
+
+| 现象 | 原因 / 处理 |
+| --- | --- |
+| 部署成功但域名 502/000 | 用了 `triggers.fetch` 路由却没 DNS 记录 → 改用 Custom Domain（`domains: [...]`）；证书签发需要 1–2 分钟 |
+| 静态资源 307 循环 | `public/` 下文件名带 `@`（如 `coin-4@2x.png`）：Workers Assets 会把 `@` 编码成 `%40` 再跳回来。用 `-2x` / `-3x`。`npm run check:portability` 已加守卫 |
+| 页面能开但按钮全不动 | 手机用局域网 IP 访问 dev 时被 Next 拦了 chunk：`next.config.ts` 已把非回环 IPv4 放进 `allowedDevOrigins`；线上不受影响 |
+| 解卦返回 501 | 没配模型：页面右上角「设置」里填 baseUrl / model / key |
+| 解卦返回 403「上游域名不在允许列表内」 | 目标供应商没进 `LLM_ALLOWED_HOSTS`：加进环境变量重新部署 |
+| 解卦返回 403「仅接受本站页面发起的请求」 | 请求带了别的站点的 `Origin`：这是防代理设计，正常用页面点不受影响 |
+| D1 报 `no such table: cases` | 首次访问 `/api/cases` 会自动建表；确认 `DB` 绑定名与配置一致 |
+
+---
+
+## 9. 目录与关键文件
+
+```
+cloudflare.config.ts      Worker 名 / 绑定 / 自定义域名（部署配置的唯一事实源）
+migrations/*.sql          D1 表结构（gen:schema 生成运行时建表常量）
+app/api/read/route.ts     解卦 SSE 代理（同源校验 + 双窗限流 + 上游白名单）
+app/api/llm-test/route.ts 模型连通性测试
+app/api/cases/route.ts    卦例读写（D1，按匿名设备 Cookie 隔离）
+lib/llm/settings.ts       供应商预设 / 校验 / localStorage
+lib/llm/server.ts         服务端校验 + SSRF 拦截 + 白名单
+public/sw.js              PWA 离线壳
+scripts/check-portability.mjs  Workers 兼容性守卫（禁 node:*、next/image、@ 文件名等）
+```
+
+---
+
+## 10. 技术要点
+
+**引擎与差分**：`lib/liuyao/najia.ts` 是 bazi-web 参考实现的逐条移植，`tests/fixtures/python-baseline.json`
+存了 4696 案的 SHA-256 指纹，`tests/liuyao-parity.test.ts` 逐案比对；纳甲/六亲/世应/六神/伏神/动变
+全部按同一口径。
+
+**随机源**：每次投掷都来自 Web Crypto（`crypto.getRandomValues`），逐位取 Uint32 最低有效位，
+天然无偏；缺 Web Crypto 直接报错，不回落 PRNG。三钱概率严格 6/7/8/9 = 1/8 · 3/8 · 3/8 · 1/8，
+`tests/random.test.ts` 钉住分布与「起卦路径不得出现 Math.random」。
+
+**案例页**：`public/data/zengshan-cases.json` 由 `scripts/extract-zengshan-cases.mjs`
+从《增删卜易卦例初探》整理文本抽取 100 例（原文不截断）；卦盘不是照抄原文，
+而是由卦名反推六次投掷、再取「同月建同日辰」的公历重排，所以与「排出此卦」看到的盘面一致。
+
+**刻意不做**：盘面上不标用神、不印吉凶判词（断语只在解卦正文里）；不取用神规则化、不排应期；
+不为个案写特例（引擎只有查表与确定性算法）。
+
+**PWA**：`app/manifest.ts` + `public/sw.js`，装到主屏后全屏无地址栏，起卦与排盘离线可用；
+Service Worker 只在非本机域名注册（localhost 自动注销，避免开发缓存脏 chunk）。

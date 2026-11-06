@@ -92,7 +92,7 @@
 - 大模型 key **只存用户本机 localStorage**，随请求体转发一次，不落库、不写日志、不回显；
   自建部署的 env 兜底 key 只放 `.llm.local`（已 gitignore），不进仓库、不进 D1。
 - 不得修改 `bazi-web` 源码（只允许读取 / 复制）。
-- 已部署到 Cloudflare Workers：<https://zhanbu.lufei.de>（步骤见 `docs/deploy.md`）；`npm run check:portability` 必须保持通过。
+- 已部署到 Cloudflare Workers：<https://zhanbu.lufei.de>（部署步骤已写进 `README.md`）；`npm run check:portability` 必须保持通过。
 
 ## 命令
 

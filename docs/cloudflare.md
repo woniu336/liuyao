@@ -1,6 +1,6 @@
 # Cloudflare 部署备忘
 
-目标：Cloudflare Workers（vinext / workerd），**暂不部署**，先把约束钉住。
+目标：Cloudflare Workers（vinext / workerd）。**部署步骤见根目录 `README.md`**；本文只记取舍与约束。
 
 ## 运行形态
 
