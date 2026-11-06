@@ -1,20 +1,23 @@
 'use client';
 
 /**
- * 案例 · 《增删卜易》卦例 100 例
- * =============================
- * 数据是静态资源 `public/data/zengshan-cases.json`，由
- * `scripts/extract-zengshan-cases.mjs` 从朱辰彬《增删卜易卦例初探》整理文本里抽取，
- * 只做结构化 + 截断，不改写原文。
+ * 案例 · 《增删卜易》卦例（古籍排版）
+ * =================================
+ * 版式照书走：一行「例N　古筮知识：…」，接占问与干支，再是六爻卦盘，
+ * 之后是原注与「1、选取用神 / 2、吉凶判断 / 3、应期细节」三段评述。
  *
- * 页面上只呈现「原文说了什么」：古筮知识、原注、用神 / 吉凶 / 应期要点。
- * 不在这里给出现代断语，也不把古人的断法当成结论。
+ * 卦盘不是照抄文本（原文里空格与折行已经乱了），而是用同一套确定性引擎
+ * 由「投掷值 + 同月建同日辰的公历」重排一遍，所以和点「排出此卦」看到的盘面一致。
+ *
+ * 数据：public/data/zengshan-cases.json，由 scripts/extract-zengshan-cases.mjs 生成。
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import SiteHeader from '@/components/site/SiteHeader';
 import { encodeCastState } from '@/lib/liuyao/cast-url';
 import type { CoinResult } from '@/components/liuyao/types';
+import { buildLiuyaoInput, castTimeInfo, parseTimeInput } from '@/lib/liuyao/ganzhi';
+import { castLiuyao, type LiuyaoChart, type LiuyaoLine } from '@/lib/liuyao/najia';
 
 interface ExampleCase {
   id: number;
@@ -33,13 +36,18 @@ interface ExampleCase {
   yong: string;
   luck: string;
   timing: string;
-  /** 六次投掷（6/7/8/9），由本卦与之卦反推，用于还原盘面 */
   coins: number[];
-  /** 与古例同「月建 + 日辰」的一个公历时刻（古例不记年，取范围内的对应日） */
   solar: string | null;
 }
 
-/** 由案例还原一次排盘链接：投掷值 + 对应公历 + 占问 */
+interface Payload {
+  source: string;
+  count: number;
+  cases: ExampleCase[];
+}
+
+const PER_PAGE = 6;
+
 function chartHref(c: ExampleCase): string | null {
   if (!c.solar || c.coins.length !== 6) return null;
   const qs = encodeCastState({
@@ -52,20 +60,230 @@ function chartHref(c: ExampleCase): string | null {
   return `/liuyao?${qs}`;
 }
 
-interface Payload {
-  source: string;
-  count: number;
-  cases: ExampleCase[];
+/** 爻画：阳爻一整条，阴爻中断；用实心块而非字符，跨字体都对得齐 */
+function YaoBar({ yang, tone }: { yang: boolean; tone: string }) {
+  if (yang) {
+    return <span style={{ display: 'block', width: 44, height: 4, background: tone, borderRadius: 1 }} />;
+  }
+  return (
+    <span style={{ display: 'flex', width: 44, height: 4, gap: 8 }}>
+      <i style={{ flex: 1, background: tone, borderRadius: 1 }} />
+      <i style={{ flex: 1, background: tone, borderRadius: 1 }} />
+    </span>
+  );
 }
 
-const PAGE = 20;
+/** 列宽：移动端先保证整盘放得下（伏神列在 <sm 隐藏，改用表下注记） */
+const COL = {
+  god: 26,
+  hidden: 64,
+  yao: 38,
+  najia: 72,
+  mark: 14,
+  move: 20,
+} as const;
+
+const MONO = '"Songti SC", "Noto Serif SC", "SimSun", serif';
+
+/** 单例卦盘：六神 / 伏神 / 本卦 / 世应 / 动 / 变卦 / 变世应 */
+function CaseChart({ chart }: { chart: LiuyaoChart }) {
+  const lines = useMemo(() => [...chart.lines].sort((a, b) => b.position - a.position), [chart.lines]);
+  const changed = chart.changedLines;
+  const changedWorld = chart.changed?.generation ?? null;
+  const changedResponse = changedWorld ? ((changedWorld + 2) % 6) + 1 : null;
+
+  const row = (l: LiuyaoLine) => {
+    const ch = changed?.[l.position - 1];
+    const hidden = l.hiddenSpirit;
+    return (
+      <div key={l.position} className="flex items-center gap-1.5 py-[5px] leading-none">
+        <span style={{ width: COL.god }} className="shrink-0 text-[12px] text-[#6E6A5C]">
+          {l.sixGod}
+        </span>
+        <span
+          style={{ width: COL.hidden }}
+          className="hidden shrink-0 truncate text-[11px] text-[#8E6337] sm:block"
+        >
+          {hidden ? `${hidden.relation}${hidden.stemBranch}` : ''}
+        </span>
+        <span style={{ width: COL.yao }} className="flex shrink-0 justify-start">
+          <YaoBar yang={l.isYang} tone="#2C2A24" />
+        </span>
+        <span style={{ width: COL.najia }} className="shrink-0 text-[12px] text-[#2C2A24]">
+          {`${l.relation}${l.stem}${l.branch}${l.element}`}
+        </span>
+        <span style={{ width: COL.mark }} className="shrink-0 text-[11.5px] text-[#8E3A2C]">
+          {l.isWorld ? '世' : l.isResponse ? '应' : ''}
+        </span>
+        <span style={{ width: COL.move }} className="shrink-0 text-[11px] text-[#8E3A2C]">
+          {l.isMoving ? (l.isYang ? '○→' : '×→') : ''}
+        </span>
+        <span style={{ width: COL.yao }} className="flex shrink-0 justify-start">
+          {ch ? <YaoBar yang={l.isMoving ? !l.isYang : l.isYang} tone="#5A3B31" /> : null}
+        </span>
+        <span style={{ width: COL.najia }} className="shrink-0 text-[12px] text-[#2C2A24]">
+          {ch ? `${ch.relation}${ch.stem}${ch.branch}${ch.element}` : ''}
+        </span>
+        <span style={{ width: COL.mark }} className="shrink-0 text-[11.5px] text-[#8E3A2C]">
+          {ch ? (l.position === changedWorld ? '世' : l.position === changedResponse ? '应' : '') : ''}
+        </span>
+      </div>
+    );
+  };
+
+  const hidden = lines
+    .filter((l) => l.hiddenSpirit)
+    .map((l) => ({ position: l.position, text: `${l.hiddenSpirit?.relation}${l.hiddenSpirit?.stemBranch}` }));
+
+  const header = (
+    <div className="flex items-center gap-1.5 pb-1 text-[10.5px] text-[#A4977E]">
+      <span style={{ width: COL.god }} className="shrink-0">
+        六神
+      </span>
+      <span style={{ width: COL.hidden }} className="hidden shrink-0 sm:block">
+        伏神
+      </span>
+      <span style={{ width: COL.yao }} className="shrink-0">
+        本卦
+      </span>
+      <span style={{ width: COL.najia }} className="shrink-0">
+        纳甲
+      </span>
+      <span style={{ width: COL.mark }} className="shrink-0" />
+      <span style={{ width: COL.move }} className="shrink-0" />
+      <span style={{ width: COL.yao }} className="shrink-0">
+        变卦
+      </span>
+      <span style={{ width: COL.najia }} className="shrink-0">
+        纳甲
+      </span>
+      <span style={{ width: COL.mark }} className="shrink-0" />
+    </div>
+  );
+
+  return (
+    <div className="mt-2 overflow-x-auto">
+      <div className="min-w-[334px]" style={{ fontFamily: MONO }}>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12px] text-[#4A5A50]">
+          <span>
+            {chart.base.palace}宫：{chart.base.name}
+            {chart.base.tags.length ? `（${chart.base.tags.join('、')}）` : ''}
+          </span>
+          {chart.changed && (
+            <span>
+              {chart.changed.palace}宫：{chart.changed.name}
+              {chart.changed.tags.length ? `（${chart.changed.tags.join('、')}）` : ''}
+            </span>
+          )}
+        </div>
+        <div className="mt-1 border-t border-[#2C2A24]/70 pt-1">
+          {header}
+          <div className="border-t border-[#2C2A24]/25">{lines.map(row)}</div>
+        </div>
+        {/* 窄屏不显示伏神列，改用一行注记 */}
+        {hidden.length > 0 && (
+          <p className="mt-1.5 font-kai text-[10.5px] leading-relaxed text-[#8E6337] sm:hidden">
+            伏神：{hidden.map((h) => `${h.text}（${h.position}爻）`).join('　')}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function buildChart(c: ExampleCase): LiuyaoChart | null {
+  if (!c.solar || c.coins.length !== 6) return null;
+  try {
+    const time = castTimeInfo(parseTimeInput(c.solar));
+    return castLiuyao(buildLiuyaoInput(time, c.coins));
+  } catch {
+    return null;
+  }
+}
+
+function CaseBlock({ c }: { c: ExampleCase }) {
+  const chart = useMemo(() => buildChart(c), [c]);
+  const href = chartHref(c);
+
+  return (
+    <article className="border-b border-[#E2DAC6] pb-7 pt-6">
+      {/* 例号 + 古筮知识 */}
+      <h2 className="font-song text-[13.5px] leading-[2] text-[#2C2A24]">
+        <span className="mr-2 font-kai text-[12px] tabular-nums text-[#B49B6B]">例{c.id}</span>
+        <span className="text-[#8C8272]">古筮知识：</span>
+        {c.topic}
+      </h2>
+
+      {/* 占问 + 得卦 */}
+      <p className="mt-1 font-song text-[13px] leading-[2] text-[#3B372F]">
+        {c.ganzhi && <span className="text-[#6E6A5C]">{c.ganzhi.replace(/\s+/g, '')}，</span>}
+        {c.question}
+        {c.guaPair && (
+          <>
+            ，得「<span className="text-[#3F5145]">{c.guaPair}</span>」
+          </>
+        )}
+      </p>
+
+      <p className="mt-0.5 font-kai text-[11.5px] tabular-nums text-[#8C8272]">
+        干支：{c.ganzhi}
+        {c.void && `　（旬空：${c.void}）`}
+      </p>
+
+      {chart ? (
+        <CaseChart chart={chart} />
+      ) : (
+        <p className="mt-2 font-kai text-[11px] text-[#A4977E]">原例未记月建或干支，无法还原卦盘。</p>
+      )}
+
+      {/* 原注与三段评述 */}
+      <div className="mt-4 space-y-2.5">
+        {c.note && (
+          <p className="font-song text-[13px] leading-[2.05] text-[#3B372F]">
+            <span className="text-[#8C8272]">原注：</span>
+            {c.note}
+          </p>
+        )}
+        {[
+          ['1、选取用神：', c.yong],
+          ['2、吉凶判断：', c.luck],
+          ['3、应期细节：', c.timing],
+        ]
+          .filter(([, v]) => Boolean(v))
+          .map(([label, v]) => (
+            <p key={label} className="font-song text-[13px] leading-[2.05] text-[#3B372F]">
+              <span className="text-[#6E6A5C]">{label}</span>
+              {v}
+            </p>
+          ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="press inline-flex h-8 items-center rounded-[3px] border border-[#C3B79E] px-3 font-song text-[11.5px] text-[#4A5A50] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]"
+          >
+            排出此卦 · 看完整盘面
+          </a>
+        ) : null}
+        {c.solar && (
+          <span className="font-kai text-[10.5px] text-[#A4977E]">
+            对应公历 {c.solar.replace('T', ' ')}（同月建、同日辰；古例不记年）
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
 
 export default function ExamplesView() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [shown, setShown] = useState(PAGE);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let alive = true;
@@ -93,13 +311,15 @@ export default function ExamplesView() {
     );
   }, [data, query]);
 
-  const visible = filtered.slice(0, shown);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const current = Math.min(page, totalPages);
+  const visible = filtered.slice((current - 1) * PER_PAGE, current * PER_PAGE);
 
   return (
     <div className="min-h-screen bg-[#F4F1E8] text-[#38423C]">
       <SiteHeader active="examples" />
 
-      <main className="mx-auto w-full max-w-[860px] px-4 pb-24 pt-8 sm:px-6 sm:pt-12">
+      <main className="mx-auto w-full max-w-[760px] px-4 pb-24 pt-8 sm:px-6 sm:pt-11">
         <header className="text-center">
           <div className="mb-3 flex items-center justify-center gap-3 font-kai text-[11px] tracking-[0.28em] text-[#98784A]">
             <span className="h-px w-8 bg-[#B89C6C]/70" />
@@ -109,21 +329,21 @@ export default function ExamplesView() {
           <h1 className="font-song text-[28px] font-semibold tracking-[0.2em] text-[#2F4438] sm:text-[32px]">案例</h1>
           <p className="mx-auto mt-3 max-w-[560px] font-song text-[12.5px] leading-[2] tracking-[0.03em] text-[#756E5F]">
             《增删卜易》卦例 100 例，据朱辰彬《增删卜易卦例初探》整理文本抽取。
-            只摘录原文：古筮知识、原注、用神 / 吉凶 / 应期要点，供对照研读，不作现成断语。
+            卦盘由同一套确定性引擎重排（同月建、同日辰），只摘录原文，不作现成断语。
           </p>
         </header>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#DED4BE] pb-3">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-y border-[#DED4BE] py-2.5">
           <label className="flex min-w-0 flex-1 items-center gap-2">
             <span className="shrink-0 font-song text-[12px] text-[#8C8272]">检索</span>
             <input
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setShown(PAGE);
+                setPage(1);
               }}
               placeholder="卦名 / 占问 / 断语关键词，如 财、六冲、应期"
-              className="h-9 w-full min-w-0 rounded-[3px] border border-[#D9CDB6] bg-white px-2.5 font-song text-[13px] text-[#2F4438] outline-none transition-colors placeholder:text-[#A6A092] focus:border-[#9A7040]"
+              className="h-9 w-full min-w-0 border-0 border-b border-[#D9CDB6] bg-transparent px-1 font-song text-[13px] text-[#2F4438] outline-none transition-colors placeholder:text-[#A6A092] focus:border-[#9A7040]"
             />
           </label>
           <span className="shrink-0 font-kai text-[11px] text-[#A4977E]">
@@ -133,144 +353,49 @@ export default function ExamplesView() {
         </div>
 
         {error && (
-          <p className="mt-6 rounded-[3px] border border-[#D9A99F] bg-[#FDF2EF] px-3 py-2 font-song text-[12px] text-[#8E3A2C]">
+          <p className="mt-6 border border-[#D9A99F] bg-[#FDF2EF] px-3 py-2 font-song text-[12px] text-[#8E3A2C]">
             {error}
           </p>
         )}
 
         {!data && !error && <p className="py-16 text-center font-song text-[12.5px] text-[#8C8272]">读取中…</p>}
 
-        <ul className="mt-2">
-          {visible.map((c) => {
-            const open = openId === c.id;
-            const href = chartHref(c);
-            return (
-              <li key={c.id} className="border-b border-[#E2DAC6]">
-                <button
-                  type="button"
-                  onClick={() => setOpenId(open ? null : c.id)}
-                  aria-expanded={open}
-                  className="group flex w-full items-start gap-3 py-3.5 text-left transition-colors hover:bg-[#F9F4E8]/70"
-                >
-                  <span className="mt-[3px] shrink-0 font-kai text-[11px] tabular-nums text-[#B49B6B]">
-                    {String(c.id).padStart(3, '0')}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                      <span className="font-song text-[14.5px] font-semibold tracking-[0.02em] text-[#2C2A24]">
-                        {c.question}
-                      </span>
-                      <span className="font-song text-[12.5px] text-[#4A5A50]">
-                        {c.ben}
-                        {c.zhi ? (
-                          <>
-                            <span className="px-1 text-[#B49B6B]">→</span>
-                            {c.zhi}
-                          </>
-                        ) : (
-                          <span className="pl-1.5 font-kai text-[10.5px] text-[#A4977E]">静卦</span>
-                        )}
-                      </span>
-                      {[c.benTag, c.zhiTag].filter(Boolean).map((t) => (
-                        <span key={t} className="rounded-[2px] border border-[#D9CDB6] px-1.5 py-[1px] font-kai text-[10px] text-[#8C8272]">
-                          {t}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="mt-1 block font-kai text-[11px] tabular-nums text-[#8C8272]">
-                      {c.ganzhi}
-                      {c.void && `　旬空 ${c.void}`}
-                    </span>
-                  </span>
-                  <span className="mt-0.5 flex shrink-0 items-center gap-2.5">
-                    {href && (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        title="按此例排出六爻盘面"
-                        className="rounded-[3px] border border-[#C3B79E] px-2 py-[3px] font-song text-[11px] text-[#4A5A50] transition-colors hover:border-[#9A7040] hover:text-[#8E6337]"
-                      >
-                        排盘
-                      </a>
-                    )}
-                    <span aria-hidden className="text-[10px] text-[#B49B6B]">
-                      {open ? '−' : '+'}
-                    </span>
-                  </span>
-                </button>
-
-                {open && (
-                  <div className="pb-5 pl-[26px] pr-1">
-                    {c.topic && (
-                      <p className="mb-2.5 border-l-2 border-[#CBBFA8] pl-2.5 font-song text-[12.5px] leading-[1.95] text-[#5E574B]">
-                        <span className="text-[#8C8272]">古筮知识　</span>
-                        {c.topic}
-                      </p>
-                    )}
-                    {[
-                      ['原注', c.note],
-                      ['用神', c.yong],
-                      ['吉凶', c.luck],
-                      ['应期', c.timing],
-                    ]
-                      .filter(([, v]) => Boolean(v))
-                      .map(([label, v]) => (
-                        <div key={label} className="mt-2 flex gap-2.5">
-                          <span className="mt-[3px] w-8 shrink-0 font-kai text-[11px] tracking-[0.1em] text-[#A4977E]">
-                            {label}
-                          </span>
-                          <p className="min-w-0 flex-1 font-song text-[12.5px] leading-[2] text-[#3B372F]">{v}</p>
-                        </div>
-                      ))}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                      {href ? (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="press inline-flex h-9 items-center gap-1.5 rounded-[3px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] px-3.5 font-song text-[12.5px] tracking-[0.12em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]"
-                        >
-                          排出此卦
-                        </a>
-                      ) : (
-                        <span className="font-kai text-[10.5px] text-[#A4977E]">原例未记月建，无法还原同日辰盘面</span>
-                      )}
-                      {c.solar && (
-                        <span className="font-kai text-[10.5px] leading-relaxed text-[#A4977E]">
-                          对应公历 {c.solar.replace('T', ' ')}（与古例同月建、同日辰；古例不记年）
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {data && filtered.length > visible.length && (
-          <div className="mt-5 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setShown((n) => n + PAGE)}
-              className="press inline-flex h-10 items-center justify-center rounded-[3px] border border-[#C3B79E] bg-[#FBF7EC] px-5 font-song text-[12.5px] tracking-[0.14em] text-[#3F4A42] hover:border-[#9A7040] hover:text-[#8E6337]"
-            >
-              再看 {Math.min(PAGE, filtered.length - visible.length)} 例
-            </button>
-          </div>
-        )}
+        {visible.map((c) => (
+          <CaseBlock key={c.id} c={c} />
+        ))}
 
         {data && filtered.length === 0 && (
           <p className="py-14 text-center font-song text-[12.5px] text-[#8C8272]">没有匹配的卦例。</p>
         )}
 
+        {data && filtered.length > 0 && (
+          <nav className="mt-6 flex items-center justify-center gap-3 font-song text-[12.5px] text-[#4A5A50]">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={current <= 1}
+              className="press inline-flex h-9 items-center rounded-[3px] border border-[#C3B79E] px-3 disabled:opacity-40"
+            >
+              上一页
+            </button>
+            <span className="font-kai tabular-nums text-[#8C8272]">
+              第 {current} / {totalPages} 页
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={current >= totalPages}
+              className="press inline-flex h-9 items-center rounded-[3px] border border-[#C3B79E] px-3 disabled:opacity-40"
+            >
+              下一页
+            </button>
+          </nav>
+        )}
+
         <p className="mt-10 border-t border-[#E2DAC6] pt-4 text-center font-kai text-[10.5px] leading-relaxed tracking-[0.04em] text-[#A4977E]">
           来源：《增删卜易》（清 · 野鹤老人）卦例，朱辰彬《增删卜易卦例初探》整理与评述；此处仅摘录原文要点。
           <br />
-          古法口径与现代解读不同，案例只作研读参照，不构成任何预测结论。
+          卦盘按原例的月建、日辰重排，供对照研读；古法口径不等于现代结论。
         </p>
       </main>
     </div>
