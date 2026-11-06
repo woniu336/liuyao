@@ -182,11 +182,8 @@ export default function CastPage() {
       {/* 山水题签：移动端不占首屏（首屏要放得下整张求测笺），PC 保留 */}
       <section className="relative isolate hidden overflow-hidden sm:block">
         <InkLandscape />
-        <div className="relative z-10 mx-auto flex min-h-[162px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-4 pt-1 text-center lg:min-h-[182px] lg:pb-5">
-          <h1 className="font-song text-[40px] font-semibold leading-none tracking-[0.26em] text-[#304239] lg:text-[44px]">
-            起 卦
-          </h1>
-          <p className="mt-3 font-kai text-[15px] tracking-[0.16em] text-[#96794F] lg:text-[16px]">
+        <div className="relative z-10 mx-auto flex min-h-[118px] w-full max-w-[1200px] flex-col items-center justify-center px-4 pb-5 pt-2 text-center lg:min-h-[136px] lg:pb-6">
+          <p className="font-kai text-[18px] tracking-[0.24em] text-[#8E6337] sm:text-[19px] lg:text-[22px]">
             取象于天地，观变于阴阳
           </p>
         </div>
