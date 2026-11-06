@@ -326,10 +326,6 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
             {JSON.stringify(facts, null, 2)}
           </pre>
         )}
-
-        <p className="mt-4 text-center font-serif text-[10px] tracking-[0.08em] text-[#A79C8A]">
-          只发送上列盘面事实 · 密钥不出服务端
-        </p>
       </div>
     </section>
   );

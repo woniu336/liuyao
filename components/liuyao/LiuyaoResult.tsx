@@ -156,11 +156,8 @@ export default function LiuyaoResult({
               <p className="mt-2 font-song text-[11.5px] tabular-nums tracking-[0.04em] text-[#7C7668] lg:text-[12.5px]">
                 公历：{solar}　·　{boardProps.datetime_info.ganzhi}
               </p>
-              {question.trim() && (
-                <p className="mt-1.5 font-kai text-[12.5px] tracking-[0.04em] text-[#6E6A5C] lg:text-[13.5px]">
-                  「{question.trim()}」
-                </p>
-              )}
+                {/* 问事只在盘面里出现一次（卦单落款），页首不重复 */}
+
             </div>
 
             {/* 太极分隔 */}
