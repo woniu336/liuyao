@@ -5,6 +5,10 @@ import { bindings, defineConfig, defineWorker, triggers } from "cf/config";
 // 自有域名：部署时用环境变量指定，例如
 //   WORKER_DOMAIN=liuyao.example.com WORKER_ZONE=example.com npx cf deploy
 // 不设就只挂 *.workers.dev（首次部署时 cf 会问一次子域名）。
+// 上游白名单：默认收紧到常用供应商（想加自建网关就改这一行，或用 LLM_ALLOWED_HOSTS 覆盖）
+const LLM_ALLOWED_DEFAULT =
+  "opencode.ai,deepseek.com,api.openai.com,api.moonshot.cn,open.bigmodel.cn,dashscope.aliyuncs.com,openrouter.ai,api.siliconflow.cn";
+
 const workerDomain = process.env.WORKER_DOMAIN;
 const workerZone = process.env.WORKER_ZONE;
 
@@ -40,6 +44,7 @@ export default defineConfig({
       ADMIN_PASSWORD: devText("ADMIN_PASSWORD"),
       ADMIN_SESSION_SECRET: devText("ADMIN_SESSION_SECRET"),
       LLM_API_KEY: devText("LLM_API_KEY"),
+      LLM_ALLOWED_HOSTS: devText("LLM_ALLOWED_HOSTS") ?? bindings.text(LLM_ALLOWED_DEFAULT),
       LLM_BASE_URL: devText("LLM_BASE_URL"),
       LLM_MODEL: devText("LLM_MODEL"),
     },

@@ -107,7 +107,7 @@ export const LLM_PROVIDERS: LlmProviderPreset[] = [
     baseUrl: '',
     models: [],
     needsKey: true,
-    hint: '填到 /v1 为止，例如 https://your-gateway.com/v1',
+    hint: '填到 /v1 为止，例如 https://your-gateway.com/v1。注意：服务端只放行白名单内的上游域名，自建网关需要先加入 LLM_ALLOWED_HOSTS。',
   },
 ];
 
