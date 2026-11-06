@@ -18,3 +18,6 @@ __pycache__
 .dev.vars
 
 .llm.local
+
+.android/
+.scratch-android.json
