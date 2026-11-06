@@ -276,10 +276,6 @@ scripts/check-portability.mjs  Workers 兼容性守卫（禁 node:*、next/image
 
 ## 10. 技术要点
 
-**引擎与差分**：`lib/liuyao/najia.ts` 是 bazi-web 参考实现的逐条移植，`tests/fixtures/python-baseline.json`
-存了 4696 案的 SHA-256 指纹，`tests/liuyao-parity.test.ts` 逐案比对；纳甲/六亲/世应/六神/伏神/动变
-全部按同一口径。
-
 **随机源**：每次投掷都来自 Web Crypto（`crypto.getRandomValues`），逐位取 Uint32 最低有效位，
 天然无偏；缺 Web Crypto 直接报错，不回落 PRNG。三钱概率严格 6/7/8/9 = 1/8 · 3/8 · 3/8 · 1/8，
 `tests/random.test.ts` 钉住分布与「起卦路径不得出现 Math.random」。
