@@ -91,8 +91,8 @@
 - 解卦 prompt：400–550 字，硬上限 600；四段 = 取用 / 盘面 / 走势 / 应期。
 - 大模型 key **只存用户本机 localStorage**，随请求体转发一次，不落库、不写日志、不回显；
   自建部署的 env 兜底 key 只放 `.llm.local`（已 gitignore），不进仓库、不进 D1。
-- 不得修改 `C:\Users\奇哥\Desktop\bazi-web` 源码（只允许读取 / 复制）。
-- 部署目标是 Cloudflare Workers，但**暂不部署**；`npm run check:portability` 必须保持通过。
+- 不得修改 `bazi-web` 源码（只允许读取 / 复制）。
+- 已部署到 Cloudflare Workers：<https://zhanbu.lufei.de>（步骤见 `docs/deploy.md`）；`npm run check:portability` 必须保持通过。
 
 ## 命令
 
@@ -105,11 +105,13 @@ npm run build && npm run build:vinext
 
 重启 3001：kill 占用端口的 PID 后 `rm -f .vinext/dev/lock.json`。
 
-UI 实测脚本写在 `C:\Users\奇哥\Desktop\bazi-web\scratch\*.mjs`（那里才有 `playwright-core`），
+UI 实测脚本写在 `bazi-web/scratch/*.mjs`（那里才有 `playwright-core`），
 浏览器 `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`，加 `--no-proxy-server`；
 时间输入框约 1s 后才自动填入，等待 ≥1500ms 再断言。
 
 ## 下一步（按序）
+
+> 已上线，线上问题优先修：手机端体验、案例页内容扩充、古籍原文校核。
 
 1. **S2 盘面收尾**：字号线宽 / 神煞字号（看板 12.5 vs 12）统一 —— 版式不可动，只能微调字重。
 2. **`/classics` 填入经校核的周易原文**（来源与版本必须标注，未核校就保持空态）。
