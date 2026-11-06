@@ -76,6 +76,23 @@ if (fs.existsSync(configPath)) {
   }
 }
 
+// public/ 里的文件名不要带 @：Workers Assets 会把 @2x 重写成 %402x 再 307 回 @2x，
+// 线上变成无限重定向（本地 dev 正常，手机 DPR 3 直接裂图）。用 -2x / -3x。
+const publicDir = path.join(root, 'public');
+const walkAll = (dir) => {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = path.join(dir, e.name);
+    return e.isDirectory() ? walkAll(full) : [full];
+  });
+};
+for (const file of walkAll(publicDir)) {
+  const rel = path.relative(root, file).split(path.sep).join('/');
+  if (rel.includes('@')) {
+    issues.push(`${rel}  文件名含 @ —— Workers Assets 会 307 重写成 %40 并循环；改用 -2x / -3x`);
+  }
+}
+
 if (issues.length) {
   console.error(`\n[check:portability] 发现 ${issues.length} 处可能阻断 Cloudflare 部署的写法：\n`);
   for (const line of issues) console.error('  ✗ ' + line);

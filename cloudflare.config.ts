@@ -1,4 +1,4 @@
-import { bindings, defineConfig, defineWorker, triggers } from "cf/config";
+import { bindings, defineConfig, defineWorker } from "cf/config";
 
 // 本地开发：把 shell 里给出的变量映射成文本绑定，nodejs_compat 会再映射到 process.env。
 // 生产环境用 cf/wrangler 的 secret 注入，不经过这里。
@@ -10,7 +10,6 @@ const LLM_ALLOWED_DEFAULT =
   "opencode.ai,deepseek.com,api.openai.com,api.moonshot.cn,open.bigmodel.cn,dashscope.aliyuncs.com,openrouter.ai,api.siliconflow.cn";
 
 const workerDomain = process.env.WORKER_DOMAIN;
-const workerZone = process.env.WORKER_ZONE;
 
 const devText = (name: string) => {
   const value = typeof process !== "undefined" ? process.env[name] : undefined;
@@ -28,16 +27,8 @@ export default defineConfig({
       notFoundHandling: "none",
       runWorkerFirst: ["/*", "!/_next/static/*", "!/*/_next/static/*"],
     },
-    ...(workerDomain
-      ? {
-          triggers: [
-            triggers.fetch({
-              pattern: `${workerDomain}/*`,
-              ...(workerZone ? { zone: workerZone } : {}),
-            }),
-          ],
-        }
-      : {}),
+    // 自有域名用 Custom Domain：会自动建 DNS 记录与证书（triggers.fetch 的路由不会自动建 DNS）
+    ...(workerDomain ? { domains: [workerDomain] } : {}),
     env: {
       ASSETS: bindings.assets(),
       DB: bindings.d1({ name: "liuyao-db" }),

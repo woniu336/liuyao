@@ -17,10 +17,13 @@ export type CoinSide = '字' | '背';
 /**
  * 正反面照片。源图只有 85×85，直接放大到 148 设备像素会发虚，
  * 所以预生成 2x（170×170，Lanczos）并用 srcSet 交给浏览器按 DPR 选择。
+ *
+ * 文件名不要带 `@`：Workers Assets 会把 `@2x` 重写成 `%402x` 再 307 回 `@2x`，
+ * 线上就成了无限重定向（本地 dev 看不出来，手机 DPR 3 直接裂图）。用 `-2x` / `-3x`。
  */
 const FACE_SRC: Record<CoinSide, { x1: string; x2: string; x3: string }> = {
-  字: { x1: '/images/coin-4.png', x2: '/images/coin-4@2x.png', x3: '/images/coin-4@3x.png' },
-  背: { x1: '/images/coin-3.png', x2: '/images/coin-3@2x.png', x3: '/images/coin-3@3x.png' },
+  字: { x1: '/images/coin-4.png', x2: '/images/coin-4-2x.png', x3: '/images/coin-4-3x.png' },
+  背: { x1: '/images/coin-3.png', x2: '/images/coin-3-2x.png', x3: '/images/coin-3-3x.png' },
 };
 
 export function Coin({
