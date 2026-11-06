@@ -38,6 +38,12 @@
 - **首页第二轮**：删「一键起卦」；「手动指定」移到铜钱下方进度圆点行的右侧；
   掷钱起爻按钮收窄到 `max-w-[300px]`、圆角 6px；右上加「历史排盘」；
   题签上移（146/162/182px）、副标题 14/15/16px、PC 内容宽 `max-w-[960px]`。
+- **案例页**（`/examples`，导航「案例」）：`public/data/zengshan-cases.json`（100 例，74KB，静态资源按需 fetch），
+  生成脚本 `scripts/extract-zengshan-cases.mjs`（源：`bazi-web/artifacts/refs/增删卜易卦例初探230例.txt`）。
+  每例可「排盘」：由卦名反推投掷值 + 同月建日辰的公历（1990–2026 内最早命中），新标签页打开 `/liuyao?c=…&t=…`。
+  3 例原缺月建/干支，不给排盘入口。
+- **设置默认模型**：DeepSeek 默认 `deepseek-flash`（下拉里还有 chat / reasoner）。
+- **排盘页顶部去掉「重新起卦」**：只留 历史排盘 / 截图 / 设置。
 - **后台已移除 + 设置（大模型）**：
   - 删 `app/admin`、`app/api/admin/*`、`components/admin/*`、`lib/admin/*`、公告条、统计注入、
     `/api/site-config`、`/api/announcement`；D1 迁移只剩 `cases`（`migrations/0001_init.sql`）。

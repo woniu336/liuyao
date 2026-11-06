@@ -3,7 +3,7 @@
 /**
  * 全站页头
  * =========
- * 左：站名「野鹤六爻」（毛笔艺术字）；右：六爻 / 历史排盘 两入口 + 设置。
+ * 左：站名「野鹤六爻」（毛笔艺术字）；右：六爻 / 案例 / 历史排盘 + 设置。
  * 「设置」只管一件事：解卦用的大模型（存在本机浏览器）。
  * 页面特有的动作（历史排盘、截图、保存卦例…）通过 `actions` 插到导航右侧，
  * 保证「同一块牌子」出现在所有页面，而不用各页各写一套 header。
@@ -15,10 +15,11 @@ import { createPortal } from 'react-dom';
 import { Settings } from 'lucide-react';
 import SettingsDialog from './SettingsDialog';
 
-export type SiteSection = 'liuyao' | 'history' | 'classics';
+export type SiteSection = 'liuyao' | 'examples' | 'history' | 'classics';
 
 const NAV: { id: SiteSection; label: string; href: string }[] = [
   { id: 'liuyao', label: '六爻', href: '/' },
+  { id: 'examples', label: '案例', href: '/examples' },
   { id: 'history', label: '历史排盘', href: '/cases' },
 ];
 

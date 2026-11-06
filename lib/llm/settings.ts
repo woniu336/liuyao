@@ -40,7 +40,7 @@ export const LLM_PROVIDERS: LlmProviderPreset[] = [
     id: 'deepseek',
     label: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com/v1',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-flash', 'deepseek-chat', 'deepseek-reasoner'],
     needsKey: true,
   },
   {

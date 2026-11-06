@@ -113,9 +113,6 @@ export default function LiuyaoResult({
             <Link href="/cases" className={HEADER_LINK}>
               历史排盘
             </Link>
-            <button type="button" onClick={onReset} className={HEADER_LINK}>
-              重新起卦
-            </button>
             <span aria-hidden className="h-4 w-px bg-[#C8BEA8]" />
             <button
               type="button"
