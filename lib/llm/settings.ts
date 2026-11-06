@@ -44,6 +44,14 @@ export const LLM_PROVIDERS: LlmProviderPreset[] = [
     needsKey: true,
   },
   {
+    id: 'opencode-go',
+    label: 'OpenCode Zen / Go',
+    baseUrl: 'https://opencode.ai/zen/go/v1',
+    models: ['deepseek-v4.1-flash', 'deepseek-v4-pro', 'kimi-k3', 'glm-5.3', 'qwen3.8-max', 'claude-haiku-5-5'],
+    needsKey: true,
+    hint: '网关要求 x-opencode-session 路由头（本站在转发时自动补）；key 形如 oc_sk_…',
+  },
+  {
     id: 'openai',
     label: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
