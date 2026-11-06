@@ -19,7 +19,4 @@ __pycache__
 
 .llm.local
 
-.android/
-.scratch-android.json
 
-dist-android/

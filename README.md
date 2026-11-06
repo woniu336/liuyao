@@ -23,6 +23,7 @@
 - 手机单列，PC 使用更宽的居中宣纸卡；三枚铜钱、字段、爻象保持在同一中轴。
 - `/classics` 已预留周易经传与易学典籍入口，当前是分类/来源校核空态，原文按来源与版本核验后再加入。
 
+> 部署到 Cloudflare 的完整步骤（登录 / D1 / 域名 / 验收 / 限流 / 回滚）：见 [docs/deploy.md](docs/deploy.md)。
 > 正在做的下一批任务与交接上下文：见 [NEXT.md](NEXT.md)。
 
 ## 跑起来
@@ -122,19 +123,6 @@ npm test
   `app/api/read/route.ts` 是服务端流式代理：prompt 在服务端拼（`route` 同目录 `prompt.ts`），
   大模型配置由请求体带上（`lib/llm/server.ts` 校验 + 拦内网地址），没配时明确返回 501。
 - `lib/llm/`：用户侧大模型设置（供应商预设、校验、localStorage 读写）与同源转发校验。
-
-## 安卓 App（TWA）
-
-`android/` 是一个最小 Trusted Web Activity 工程：用 Chrome 内核打开线上站，全屏无地址栏，
-站点更新即 App 更新。域名归属靠 `public/.well-known/assetlinks.json`（包名 + 签名 SHA-256）校验。
-
-- 构建：GitHub Actions（`.github/workflows/android.yml`）→ Actions → Android TWA APK → Run workflow，
-  产物在 Artifacts；签名从仓库 secrets 注入（`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS`）。
-- 当前包：`de.lufei.zhanbu` · v1.0.0 · minSdk 23 · targetSdk 34；下载地址
-  <https://zhanbu.lufei.de/download/yehe-liuyao-1.0.0.apk>（同时发在 GitHub Release `android-v1.0.0`）。
-- 本地打包（可选）：装 JDK 17 + Android SDK，`cd android && gradle assembleRelease`，
-  环境变量 `KEYSTORE_PATH / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD`。
-- 签名密钥不进仓库：本地 `.android/liuyao-release.jks`（已 gitignore），丢了就无法覆盖安装。
 
 ## 案例（`/examples`）
 
