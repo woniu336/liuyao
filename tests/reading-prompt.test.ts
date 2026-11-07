@@ -38,7 +38,8 @@ describe('运行时 = 核心章 + 命中专项章（整章原样，不精简）'
     const sys = composeSystem('我家猫昨天从阳台跑丢了，还能找回来吗');
     expect(sys).toContain('# 八、六畜／宠物占专项');
     expect(sys).toContain('现实寻宠行动（优先于卦理）');
-    expect(sys).toContain('猫犬同位');
+    expect(sys).toContain('**猫取寅**');
+    expect(sys).toContain('传本待核、仅备查');
     expect(sys).not.toContain('# 十二、求财与经营专项');
   });
 
