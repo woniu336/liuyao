@@ -38,10 +38,11 @@ export interface LlmProviderPreset {
 export const LLM_PROVIDERS: LlmProviderPreset[] = [
   {
     id: 'deepseek',
-    label: 'DeepSeek',
+    label: 'DeepSeek 官方（支持上下文缓存）',
     baseUrl: 'https://api.deepseek.com/v1',
-    models: ['deepseek-flash', 'deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-chat', 'deepseek-reasoner'],
     needsKey: true,
+    hint: '官方 API 会自动缓存重复前缀：本站提示词约 4 万 token，第二次起命中缓存后输入按缓存价计（约为原价 1/10），预填充也更快，长前缀不易被限流。',
   },
   {
     id: 'opencode-go',
