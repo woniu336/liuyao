@@ -157,7 +157,9 @@ export async function POST(req: Request): Promise<Response> {
    * 36k token 的前缀在网关满载时会被拒（429 / prefill_cap_refused / overloaded），属于瞬时错误。
    * 在服务端重试（间隔 2.5s、6s）比让用户手动重点体验好；此时还没开始流式输出，重试是安全的。
    */
-  const RETRY_DELAYS = [2_500, 6_000];
+  // 网关在长前缀满载时给的建议是 "retry after 30 s"，所以间隔按 5s / 20s 起步；
+  // 若上游消息里给了 "after N s"，以它为准（上限 35s）。
+  const RETRY_DELAYS = [5_000, 20_000];
   let upstream: Response | null = null;
   let lastError = '';
 
@@ -182,7 +184,9 @@ export async function POST(req: Request): Promise<Response> {
         { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8' } },
       );
     }
-    await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+    const hinted = Number(/after\s+(\d{1,2})\s*s/i.exec(lastError)?.[1] ?? 0);
+    const waitMs = hinted > 0 ? Math.min(hinted * 1000, 35_000) : RETRY_DELAYS[attempt];
+    await new Promise((r) => setTimeout(r, waitMs));
   }
 
   if (!upstream || !upstream.ok || !upstream.body) {

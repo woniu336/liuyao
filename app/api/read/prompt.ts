@@ -10,16 +10,7 @@
  */
 
 import type { ReadingFacts } from '@/lib/readings/types';
-import {
-  CHAPTER_FORMAT_MAP,
-  CORE_CHAPTER_IDS,
-  OUTPUT_CHAPTER_ID,
-  OUTPUT_FORMATS,
-  OUTPUT_HEAD,
-  PROMPT_SPEC,
-  SPEC_CHAPTERS,
-} from '@/lib/readings/prompt-spec.generated';
-import { pickSpecialtyChapters } from '@/lib/readings/specialties';
+import { PROMPT_SPEC } from '@/lib/readings/prompt-spec.generated';
 
 const SYSTEM_PROMPT = `# 你是谁
 你是一位六爻解卦者。熟悉《易冒》《黄金策》《增删卜易》《卜筮正宗》等通行法理，也清楚自己的边界：只作传统文化参考，不替代医疗、法律、财务的专业判断。
@@ -141,19 +132,13 @@ function liuyaoBrief(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): string {
 
 /** 六爻专用：系统提示与用户消息 */
 /**
- * 拼 prompt：核心章 + 命中专项章（**整章原样搬运，一个字不改**）+ 本次盘面事实
+ * 拼 prompt：整份规范（原版全量，不选章、不压缩）+ 本次盘面事实
  *
- * 为什么不发全量：整份 5.4 万字 ≈ 36k token，首字 9–10 秒，且网关满载时容易被拒
- * （429 / prefill_cap_refused）。按问句只发「核心章 + 命中的专项章」后约 10–17k token，
- * 内容没有精简，只是不再发用不到的章。
- *
- * 选章是**多命中**：问「面试完顺便问财运」会同时带上工作章与求财章；
- * 没有任何命中时只发核心章（含 §三 分类与 §六 通用原则），不硬套专项。
- *
- * 规范正文见 docs/prompt-liuyao.md，构建期由 scripts/build-prompt-spec.mjs 拆章内联。
+ * 规范正文见 docs/prompt-liuyao.md，构建期由 scripts/build-prompt-spec.mjs
+ * 内联成 lib/readings/prompt-spec.generated.ts（Workers 无 fs）。
  */
 export function buildLiuyaoPrompt(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): { system: string; user: string } {
-  const system = composeSystem(facts.question ?? '');
+  const system = composeSystem();
 
   const ask = '请按四段写出这一卦的解读。盘面已是定局，不必重排，也不要复述全部爻位。';
   return {
@@ -171,22 +156,13 @@ ${ask}
  * + 命中的专项章（七…十四，整章原样）
  * + §十七 头部（四层 + 四段模板）+ 通用清单 A + 命中专项对应的输出清单
  */
-export function composeSystem(question: string): string {
-  const picked = pickSpecialtyChapters(question);
-  const wanted = new Set<string>([...CORE_CHAPTER_IDS, ...picked]);
-  const letters = ['A', ...picked.map((c) => CHAPTER_FORMAT_MAP[c]).filter(Boolean)];
-
-  const blocks: string[] = [];
-  // 按文档顺序拼，章号顺延也不会错位
-  for (const id of Object.keys(SPEC_CHAPTERS)) {
-    if (!wanted.has(id)) continue;
-    if (id === OUTPUT_CHAPTER_ID) {
-      // 输出格式章：只发「四层 + 四段模板」头部 + 通用清单 A + 命中专项清单
-      blocks.push([OUTPUT_HEAD, ...letters.map((l) => OUTPUT_FORMATS[l]).filter(Boolean)].join('\n\n'));
-      continue;
-    }
-    const text = SPEC_CHAPTERS[id];
-    if (text) blocks.push(text);
-  }
-  return blocks.join('\n\n');
+/**
+ * system = 整份规范（59k 字 / ≈40k token），不做任何选章、不用关键词正则。
+ *
+ * 为什么全量：断卦是模型的判断工作，哪一章适用应由它自己理解；
+ * 用正则预选章会替模型做决定，漏命中就少一整章规则，误命中又白烧 token。
+ * 成本实测 ≈$0.006/次，对本站量级可忽略。
+ */
+export function composeSystem(): string {
+  return PROMPT_SPEC;
 }
