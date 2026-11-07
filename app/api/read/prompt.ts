@@ -10,7 +10,15 @@
  */
 
 import type { ReadingFacts } from '@/lib/readings/types';
-import { PROMPT_SPEC } from '@/lib/readings/prompt-spec.generated';
+import {
+  CHAPTER_FORMAT_MAP,
+  CORE_CHAPTER_IDS,
+  OUTPUT_FORMATS,
+  OUTPUT_HEAD,
+  PROMPT_SPEC,
+  SPEC_CHAPTERS,
+} from '@/lib/readings/prompt-spec.generated';
+import { pickSpecialtyChapters } from '@/lib/readings/specialties';
 
 const SYSTEM_PROMPT = `# 你是谁
 你是一位六爻解卦者。熟悉《易冒》《黄金策》《增删卜易》《卜筮正宗》等通行法理，也清楚自己的边界：只作传统文化参考，不替代医疗、法律、财务的专业判断。
@@ -132,17 +140,19 @@ function liuyaoBrief(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): string {
 
 /** 六爻专用：系统提示与用户消息 */
 /**
- * 拼 prompt：整份《断卦规范》（原版，不精简）+ 本次盘面事实
+ * 拼 prompt：核心章 + 命中专项章（**整章原样搬运，一个字不改**）+ 本次盘面事实
  *
- * 为什么不路由、不精简、不让用户选：
- *   - 专项规则要原版（宠物走失 8 步、婚姻 10 步…），压缩就会丢要点；
- *   - 关键词对复合问句（"面试完顺便问财运"）必错，让用户选又多一步操作；
- *   - 所以整份规范常驻 system（约 5.4 万字 ≈ 36k token），由模型自己按问句归类，
- *     天然支持复合问题。规范正文见 docs/prompt-liuyao.md，构建期由
- *     scripts/build-prompt-spec.mjs 内联成 prompt-spec.generated.ts（Workers 无 fs）。
+ * 为什么不发全量：整份 5.4 万字 ≈ 36k token，首字 9–10 秒，且网关满载时容易被拒
+ * （429 / prefill_cap_refused）。按问句只发「核心章 + 命中的专项章」后约 10–17k token，
+ * 内容没有精简，只是不再发用不到的章。
+ *
+ * 选章是**多命中**：问「面试完顺便问财运」会同时带上工作章与求财章；
+ * 没有任何命中时只发核心章（含 §三 分类与 §六 通用原则），不硬套专项。
+ *
+ * 规范正文见 docs/prompt-liuyao.md，构建期由 scripts/build-prompt-spec.mjs 拆章内联。
  */
 export function buildLiuyaoPrompt(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): { system: string; user: string } {
-  const system = PROMPT_SPEC;
+  const system = composeSystem(facts.question ?? '');
 
   const ask = '请按四段写出这一卦的解读。盘面已是定局，不必重排，也不要复述全部爻位。';
   return {
@@ -152,4 +162,31 @@ export function buildLiuyaoPrompt(facts: Extract<ReadingFacts, { kind: 'liuyao' 
 ${ask}
 （以上事实由引擎确定性排出；不要改写事实本身。）`,
   };
+}
+
+/**
+ * 按问句组装 system：
+ *   核心章（零/一/二/三/四/五/六/十五/十六/十八/十九/二十）
+ * + 命中的专项章（七…十四，整章原样）
+ * + §十七 头部（四层 + 四段模板）+ 通用清单 A + 命中专项对应的输出清单
+ */
+export function composeSystem(question: string): string {
+  const picked = pickSpecialtyChapters(question);
+  const ids = [...CORE_CHAPTER_IDS, ...picked].sort(
+    (a, b) => ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'].indexOf(a) -
+      ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'].indexOf(b),
+  );
+
+  const blocks: string[] = [];
+  for (const id of ids) {
+    if (id === '十七') {
+      // §十七 用「头部 + 选中清单」替换整章（清单按专项取，A 通用清单常带）
+      const letters = ['A', ...picked.map((c) => CHAPTER_FORMAT_MAP[c]).filter(Boolean)];
+      blocks.push([OUTPUT_HEAD, ...letters.map((l) => OUTPUT_FORMATS[l]).filter(Boolean)].join('\n\n'));
+      continue;
+    }
+    const text = SPEC_CHAPTERS[id];
+    if (text) blocks.push(text);
+  }
+  return blocks.join('\n\n');
 }
