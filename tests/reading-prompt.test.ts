@@ -27,6 +27,13 @@ describe('运行时 = 核心章 + 命中专项章（整章原样，不精简）'
     expect(sys).toContain('硬上限 600 字');
   });
 
+  it('宠物走失：输出顺序里不再有「现实提醒置顶」，四段外壳优先', () => {
+    const sys = composeSystem('我家猫跑丢了');
+    expect(sys).not.toContain('**现实行动提醒**：明确不要等卦');
+    expect(sys).toContain('不单独设“现实提醒”置顶');
+    expect(sys).toContain('唯一例外：人物疾病／六畜出现急症征象时，第一句必须先提醒就医');
+  });
+
   it('宠物走失：只带 §八（含走失子节），不带求财章', () => {
     const sys = composeSystem('我家猫昨天从阳台跑丢了，还能找回来吗');
     expect(sys).toContain('# 八、六畜／宠物占专项');
