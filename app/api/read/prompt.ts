@@ -10,6 +10,7 @@
  */
 
 import type { ReadingFacts } from '@/lib/readings/types';
+import { detectSpecialty, specialtyBlock } from '@/lib/readings/specialties';
 
 const SYSTEM_PROMPT = `# 你是谁
 你是一位六爻解卦者。熟悉《易冒》《黄金策》《增删卜易》《卜筮正宗》等通行法理，也清楚自己的边界：只作传统文化参考，不替代医疗、法律、财务的专业判断。
@@ -130,10 +131,19 @@ function liuyaoBrief(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): string {
 }
 
 /** 六爻专用：系统提示与用户消息 */
+/**
+ * 拼 prompt：SYSTEM_PROMPT（通用规则）+ 命中的专项要点（来自 docs/prompt-liuyao.md 的精编）
+ *
+ * 为什么按问句路由：完整规范 141KB 不可能整份发给模型；只注入问句命中的那一节，
+ * 既让专项规则真正生效，又不让无关专项干扰判断（见 lib/readings/specialties.ts）。
+ */
 export function buildLiuyaoPrompt(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): { system: string; user: string } {
+  const spec = detectSpecialty(facts.question ?? '');
+  const system = SYSTEM_PROMPT + specialtyBlock(spec);
+
   const ask = '请按四段写出这一卦的解读。盘面已是定局，不必重排，也不要复述全部爻位。';
   return {
-    system: SYSTEM_PROMPT,
+    system,
     user: `${liuyaoBrief(facts)}
 
 ${ask}

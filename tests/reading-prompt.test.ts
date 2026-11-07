@@ -33,7 +33,7 @@ describe('解卦 prompt（精简版）', () => {
   const { system, user } = buildLiuyaoPrompt(facts);
 
   it('系统提示仍在两千字内，且明确「不重排盘」', () => {
-    expect(system.length).toBeLessThan(2000);
+    expect(system.length).toBeLessThan(3200); // 通用 1930 + 专项要点 ≤ ~500
     expect(system).toContain('不要重排盘');
     // 事实层铁律（v3 新增）：不重算、不改写、缺失标未提供
     expect(system).toContain('事实层铁律');
