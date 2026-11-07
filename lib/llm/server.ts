@@ -102,6 +102,32 @@ export function upstreamHostAllowed(baseUrl: string): { ok: true } | { ok: false
   return hit ? { ok: true } : { ok: false, error: `上游域名不在允许列表内：${host}` };
 }
 
+/**
+ * 上游是否值得重试（纯函数，便于测试）。
+ *
+ * 整份规范约 36k token 的前缀在网关满载时会被拒（429 / prefill_cap_refused / overloaded），
+ * 这类错误是瞬时的：同一请求隔几秒再来往往就成功，所以在服务端重试一次比让用户重点便宜。
+ */
+export function shouldRetryUpstream(status: number, bodyText: string): boolean {
+  if (status === 429 || status === 502 || status === 503 || status === 504) return true;
+  return /overloaded|prefill_cap_refused|at capacity|rate.?limit|too many requests|retry shortly/i.test(bodyText);
+}
+
+/** 把上游错误翻译成一句人话（前端不再显示原始 JSON） */
+export function friendlyUpstreamError(status: number, bodyText: string): string {
+  if (status === 429 || /overloaded|at capacity|prefill_cap_refused/i.test(bodyText)) {
+    return '上游模型当前繁忙（429），稍等几秒再点「重试」即可；本次请求没有产生费用。';
+  }
+  if (status === 401 || status === 403) {
+    return '上游拒绝了这个 key（401/403）：请到「设置」里核对 API Key 是否有权限。';
+  }
+  if (status === 404) {
+    return '上游 404：接口地址或模型名不对，请检查「设置」里的 Base URL 与模型名。';
+  }
+  const brief = bodyText.replace(/\s+/g, ' ').slice(0, 160);
+  return `上游返回 ${status}：${brief}`;
+}
+
 /** 私人部署兜底：服务端环境变量（客户端没配时才会用到） */
 function envFallback(): LlmRequestConfig | null {
   if (typeof process === 'undefined') return null;

@@ -8,7 +8,7 @@ import {
   validateLlmSettings,
   type LlmSettings,
 } from '../lib/llm/settings';
-import { normalizeLlmRequest, upstreamHostAllowed } from '../lib/llm/server';
+import { friendlyUpstreamError, normalizeLlmRequest, shouldRetryUpstream, upstreamHostAllowed } from '../lib/llm/server';
 
 const deepseek: LlmSettings = {
   provider: 'deepseek',
@@ -116,6 +116,26 @@ describe('服务端校验（防打内网 / 形态硬约束）', () => {
       if (saved === undefined) delete process.env.LLM_ALLOWED_HOSTS;
       else process.env.LLM_ALLOWED_HOSTS = saved;
     }
+  });
+
+  it('上游瞬时错误要重试，客户端错误不重试', () => {
+    // 网关满载/限流 → 重试
+    expect(shouldRetryUpstream(429, '')).toBe(true);
+    expect(shouldRetryUpstream(503, '')).toBe(true);
+    expect(shouldRetryUpstream(500, '{"message":"[overloaded] retry shortly"}')).toBe(true);
+    expect(shouldRetryUpstream(400, '{"message":"[prefill_cap_refused] the cell is at capacity"}')).toBe(true);
+    // key 错、模型名错 → 不重试
+    expect(shouldRetryUpstream(401, 'invalid api key')).toBe(false);
+    expect(shouldRetryUpstream(404, 'model not found')).toBe(false);
+    expect(shouldRetryUpstream(400, 'invalid request')).toBe(false);
+  });
+
+  it('上游错误翻成人话（不把 JSON 直接丢给用户）', () => {
+    expect(friendlyUpstreamError(429, '')).toContain('繁忙');
+    expect(friendlyUpstreamError(200, '[overloaded]')).toContain('繁忙');
+    expect(friendlyUpstreamError(401, 'x')).toContain('API Key');
+    expect(friendlyUpstreamError(404, 'x')).toContain('Base URL');
+    expect(friendlyUpstreamError(400, 'bad thing')).toContain('400');
   });
 
   it('没传 llm 时退回服务端环境变量（没配就是 null）', () => {

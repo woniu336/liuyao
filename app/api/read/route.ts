@@ -21,7 +21,13 @@ import { buildLiuyaoPrompt } from './prompt';
 import type { ReadingFacts } from '@/lib/readings/types';
 import { buildChatRequestBody } from '@/lib/readings/llm-request';
 import { buildProviderHeaders } from '@/lib/readings/provider-headers';
-import { normalizeLlmRequest, upstreamHostAllowed, type LlmRequestConfig } from '@/lib/llm/server';
+import {
+  friendlyUpstreamError,
+  normalizeLlmRequest,
+  shouldRetryUpstream,
+  upstreamHostAllowed,
+  type LlmRequestConfig,
+} from '@/lib/llm/server';
 
 const MAX_BODY_BYTES = 64 * 1024;
 /** 分钟窗 + 小时窗双限：分钟挡突发，小时挡刷量（进程内计数，多实例时偏松，正式上限交给 CF 边缘限流） */
@@ -133,34 +139,55 @@ export async function POST(req: Request): Promise<Response> {
 
   const { system, user } = buildLiuyaoPrompt(facts);
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: buildProviderHeaders(config.baseUrl, config.key),
-      body: JSON.stringify(
-        buildChatRequestBody({
-          model: config.model,
-          // 整份规范约 36k token：若模型默认开思考，会把输出预算全吃掉（实测 content 为空、finish_reason=length）。
-          // 本产品只要 400–550 字正文，默认关闭思考；用户在「设置」里显式开启才传 enabled。
-          thinking: config.thinking ?? 'disabled',
-          reasoningEffort: config.reasoningEffort,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-        }),
-      ),
-      signal: AbortSignal.timeout(120_000),
-    });
-  } catch (e) {
-    return Response.json({ error: `上游模型不可达：${(e as Error).message}` }, { status: 502 });
+  const requestBody = JSON.stringify(
+    buildChatRequestBody({
+      model: config.model,
+      // 整份规范约 36k token：若模型默认开思考，会把输出预算全吃掉（实测 content 为空、finish_reason=length）。
+      // 本产品只要 400–550 字正文，默认关闭思考；用户在「设置」里显式开启才传 enabled。
+      thinking: config.thinking ?? 'disabled',
+      reasoningEffort: config.reasoningEffort,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  );
+
+  /**
+   * 36k token 的前缀在网关满载时会被拒（429 / prefill_cap_refused / overloaded），属于瞬时错误。
+   * 在服务端重试（间隔 2.5s、6s）比让用户手动重点体验好；此时还没开始流式输出，重试是安全的。
+   */
+  const RETRY_DELAYS = [2_500, 6_000];
+  let upstream: Response | null = null;
+  let lastError = '';
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt += 1) {
+    try {
+      upstream = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: buildProviderHeaders(config.baseUrl, config.key),
+        body: requestBody,
+        signal: AbortSignal.timeout(120_000),
+      });
+    } catch (e) {
+      return Response.json({ error: `上游模型不可达：${(e as Error).message}` }, { status: 502 });
+    }
+
+    if (upstream.ok && upstream.body) break;
+
+    lastError = await upstream.text().catch(() => '');
+    if (!shouldRetryUpstream(upstream.status, lastError) || attempt === RETRY_DELAYS.length) {
+      return new Response(
+        `data: ${JSON.stringify({ error: friendlyUpstreamError(upstream.status, lastError) })}\n\n`,
+        { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8' } },
+      );
+    }
+    await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
   }
 
-  if (!upstream.ok || !upstream.body) {
-    const text = await upstream.text().catch(() => '');
+  if (!upstream || !upstream.ok || !upstream.body) {
     return new Response(
-      `data: ${JSON.stringify({ error: `上游模型返回 ${upstream.status}：${text.slice(0, 200)}` })}\n\n`,
+      `data: ${JSON.stringify({ error: friendlyUpstreamError(429, lastError) })}\n\n`,
       { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8' } },
     );
   }

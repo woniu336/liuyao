@@ -304,7 +304,9 @@ const ReadingPanel = React.forwardRef<ReadingPanelHandle, ReadingPanelProps>(fun
           <div className="mt-4 space-y-1.5 font-serif text-[12px] leading-relaxed text-[#8e3a2c]">
             <p>{error}</p>
             <p className="text-[11px] text-[#9C907F]">
-              检查右上角「设置」里的接口地址、模型名与 API Key；「测试连接」能直接看到上游返回。
+              {/繁忙|429|overloaded|capacity/i.test(error)
+                ? '上游瞬时繁忙，服务端已自动重试过；稍等几秒点「重 试」即可，不会重复计费。'
+                : '检查右上角「设置」里的接口地址、模型名与 API Key；「测试连接」能直接看到上游返回。'}
             </p>
           </div>
         )}
