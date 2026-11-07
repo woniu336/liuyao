@@ -35,6 +35,13 @@ describe('解卦 prompt（精简版）', () => {
   it('系统提示仍在两千字内，且明确「不重排盘」', () => {
     expect(system.length).toBeLessThan(2000);
     expect(system).toContain('不要重排盘');
+    // 事实层铁律（v3 新增）：不重算、不改写、缺失标未提供
+    expect(system).toContain('事实层铁律');
+    expect(system).toContain('不重算、不改写');
+    expect(system).toContain('未提供');
+    // 专项路由：宠物/失物/求财/工作/家宅
+    expect(system).toContain('宠物取子孙为生命主体');
+    expect(system).toContain('求财妻财为主');
     expect(system).toContain('不断死');
     expect(system).toContain('应期');
   });

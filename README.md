@@ -287,5 +287,8 @@ scripts/check-portability.mjs  Workers 兼容性守卫（禁 node:*、next/image
 **刻意不做**：盘面上不标用神、不印吉凶判词（断语只在解卦正文里）；不取用神规则化、不排应期；
 不为个案写特例（引擎只有查表与确定性算法）。
 
+**断卦提示词**：完整规范在 [`docs/prompt-liuyao.md`](docs/prompt-liuyao.md)（v3，含"代码引擎负责排盘事实、
+AI 只负责推理"的两层职责与八条硬约束）；运行时只用其中精编版（`app/api/read/prompt.ts`，四段 400–550 字）。
+
 **PWA**：`app/manifest.ts` + `public/sw.js`，装到主屏后全屏无地址栏，起卦与排盘离线可用；
 Service Worker 只在非本机域名注册（localhost 自动注销，避免开发缓存脏 chunk）。
