@@ -13,6 +13,7 @@ import type { ReadingFacts } from '@/lib/readings/types';
 import {
   CHAPTER_FORMAT_MAP,
   CORE_CHAPTER_IDS,
+  OUTPUT_CHAPTER_ID,
   OUTPUT_FORMATS,
   OUTPUT_HEAD,
   PROMPT_SPEC,
@@ -172,16 +173,15 @@ ${ask}
  */
 export function composeSystem(question: string): string {
   const picked = pickSpecialtyChapters(question);
-  const ids = [...CORE_CHAPTER_IDS, ...picked].sort(
-    (a, b) => ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'].indexOf(a) -
-      ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'].indexOf(b),
-  );
+  const wanted = new Set<string>([...CORE_CHAPTER_IDS, ...picked]);
+  const letters = ['A', ...picked.map((c) => CHAPTER_FORMAT_MAP[c]).filter(Boolean)];
 
   const blocks: string[] = [];
-  for (const id of ids) {
-    if (id === '十七') {
-      // §十七 用「头部 + 选中清单」替换整章（清单按专项取，A 通用清单常带）
-      const letters = ['A', ...picked.map((c) => CHAPTER_FORMAT_MAP[c]).filter(Boolean)];
+  // 按文档顺序拼，章号顺延也不会错位
+  for (const id of Object.keys(SPEC_CHAPTERS)) {
+    if (!wanted.has(id)) continue;
+    if (id === OUTPUT_CHAPTER_ID) {
+      // 输出格式章：只发「四层 + 四段模板」头部 + 通用清单 A + 命中专项清单
       blocks.push([OUTPUT_HEAD, ...letters.map((l) => OUTPUT_FORMATS[l]).filter(Boolean)].join('\n\n'));
       continue;
     }

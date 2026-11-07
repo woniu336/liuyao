@@ -31,9 +31,10 @@ for (let i = 0; i < heads.length; i += 1) {
 }
 const preface = text.slice(0, heads[0]?.index ?? 0).trimEnd();
 
-// ---- 把「十七、输出格式」再拆成 头部 + A~I ----
-const ch17 = chapters['十七'] ?? '';
-const fmtHeads = [...ch17.matchAll(/^## ([A-I])\. (.+)$/gm)];
+// ---- 把「输出格式」章再拆成 头部 + A~J（章号随文档顺延，动态识别） ----
+const outputChapterId = Object.entries(chapters).find(([, v]) => v.includes('## A. 通用人事占'))?.[0] ?? '';
+const ch17 = chapters[outputChapterId] ?? '';
+const fmtHeads = [...ch17.matchAll(/^## ([A-J])\. (.+)$/gm)];
 const outputHead = fmtHeads.length ? ch17.slice(0, fmtHeads[0].index).trimEnd() : ch17;
 const formats = {};
 for (let i = 0; i < fmtHeads.length; i += 1) {
@@ -66,11 +67,14 @@ export const OUTPUT_FORMATS: Record<string, string> = {
 ${Object.entries(formats).map(([k, v]) => `  ${q(k)}: ${q(v)},`).join('\n')}
 };
 
+/** 「输出格式」所在章号（运行时用它的头部 + 选中清单替换整章） */
+export const OUTPUT_CHAPTER_ID = ${q(Object.entries(chapters).find(([, v]) => v.includes('## A. 通用人事占'))?.[0] ?? '')};
+
 /** 每次必带的章节（通用规则与格式，不含任何专项） */
-export const CORE_CHAPTER_IDS = ${q(['零', '一', '二', '三', '四', '五', '六', '十五', '十六', '十七', '十八', '十九', '二十'])};
+export const CORE_CHAPTER_IDS = ${q(['零', '一', '二', '三', '四', '五', '六', '十六', '十七', '十八', '十九', '二十', '二十一'])};
 
 /** 专项 → 章节 / 输出清单 的对应表（供 lib/readings/specialties.ts 使用） */
-export const CHAPTER_FORMAT_MAP: Record<string, string> = ${q({ 七: 'B', 八: 'C', 九: 'D', 十: 'E', 十一: 'F', 十二: 'G', 十三: 'H', 十四: 'I' })};
+export const CHAPTER_FORMAT_MAP: Record<string, string> = ${q({ 七: 'B', 八: 'C', 九: 'D', 十: 'E', 十一: 'F', 十二: 'G', 十三: 'H', 十四: 'I', 十五: 'J' })};
 `;
 
 if (process.argv.includes('--check')) {

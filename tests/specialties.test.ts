@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { QUICK_REF, quickRefBlock } from '../lib/readings/specialties';
+import { QUICK_REF, pickSpecialtyChapters, quickRefBlock } from '../lib/readings/specialties';
 import { buildLiuyaoPrompt } from '../app/api/read/prompt';
 import { buildLiuyaoReadingFacts } from '../lib/readings/facts';
 import { buildLiuyaoInput, castTimeInfo, parseTimeInput } from '../lib/liuyao/ganzhi';
@@ -39,5 +39,24 @@ describe('专项速查层（常驻，不依赖用户选择）', () => {
     expect(block).toContain('专项速查');
     expect(block).toContain('不要硬套');
     expect(block.length).toBeLessThan(1600);
+  });
+});
+
+describe('问句 → 专项章（多命中，供运行时选章）', () => {
+  it('学业类命中第十五章', () => {
+    for (const q of ['孩子今年高考能不能上本科', '考研复试能过吗', '法考能过吗', '职称评审能过吗', '考公面试要注意什么']) {
+      expect(pickSpecialtyChapters(q), q).toContain('十五');
+    }
+  });
+
+  it('「公司面试」仍归工作章，不误入学业章', () => {
+    expect(pickSpecialtyChapters('这家公司面试能过吗')).toContain('十三');
+    expect(pickSpecialtyChapters('这家公司面试能过吗')).not.toContain('十五');
+  });
+
+  it('复合问句多命中：考试 + 求财', () => {
+    const hit = pickSpecialtyChapters('高考完想问问这个月兼职收入');
+    expect(hit).toContain('十五');
+    expect(hit).toContain('十二');
   });
 });

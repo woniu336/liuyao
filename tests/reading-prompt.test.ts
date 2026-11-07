@@ -19,7 +19,7 @@ describe('运行时 = 核心章 + 命中专项章（整章原样，不精简）'
     const sys = composeSystem('');
     expect(sys).toContain('# 零、两层职责与事实层硬约束');
     expect(sys).toContain('# 六、通用断卦原则');
-    expect(sys).toContain('# 十七、输出格式');
+    expect(sys).toContain('# 十八、输出格式');
     for (const t of ['# 七、人物疾病占专项', '# 八、六畜／宠物占专项', '# 九、行人', '# 十、婚姻', '# 十一、普通失物', '# 十二、求财', '# 十三、工作', '# 十四、家宅']) {
       expect(sys, `不该带专项：${t}`).not.toContain(t);
     }
@@ -58,7 +58,7 @@ describe('运行时 = 核心章 + 命中专项章（整章原样，不精简）'
 
   it('入选的每一章都与规范逐字一致（抽样首尾）', () => {
     const sys = composeSystem('我家猫跑丢了');
-    for (const marker of ['# 零、两层职责与事实层硬约束', '# 八、六畜／宠物占专项', '# 十九、自检清单']) {
+    for (const marker of ['# 零、两层职责与事实层硬约束', '# 八、六畜／宠物占专项', '# 二十、自检清单']) {
       const start = specDoc.indexOf(marker);
       expect(start, `规范里找不到 ${marker}`).toBeGreaterThan(-1);
       const head = specDoc.slice(start, start + 120);

@@ -47,4 +47,35 @@ live('已部署 Worker：解卦链路', () => {
     expect(out).toMatch(/子孙/);
     expect(out.length).toBeGreaterThan(300);
   }, 240_000);
+
+  it('高考问句 → 200 且按学业专项分层（子孙为主体、父母文书、官鬼录取）', async () => {
+    const facts = buildLiuyaoReadingFacts(chart, time, '孩子今年高考，能不能上本科，志愿怎么填');
+    const res = await fetch(`${BASE}/api/read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: BASE },
+      body: JSON.stringify({
+        facts,
+        llm: { baseUrl: 'https://opencode.ai/zen/go/v1', model: 'deepseek-v4.1-flash', apiKey: KEY },
+      }),
+    });
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const out = text
+      .split('\n')
+      .filter((l) => l.startsWith('data:'))
+      .map((l) => {
+        try {
+          return (JSON.parse(l.slice(5).trim()) as { content?: string }).content ?? '';
+        } catch {
+          return '';
+        }
+      })
+      .join('');
+    console.log('\n--- 线上 Worker · 学业 ---\n' + out);
+    expect(out).toMatch(/一、取用/);
+    expect(out).toMatch(/四、应期/);
+    expect(out).toMatch(/子孙/);
+    expect(out).toMatch(/父母|文书|试卷/);
+    expect(out).toMatch(/官鬼|录取/);
+  }, 240_000);
 });
