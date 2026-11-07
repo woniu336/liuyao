@@ -16,7 +16,9 @@
     "deploy:vinext": "vinext-cloudflare deploy",
     "gen:schema": "node scripts/gen-db-schema.mjs",
     "check:schema": "node scripts/gen-db-schema.mjs --check",
-    "check": "npm run check:schema && npm run check:portability && npm test"
+    "check": "npm run check:schema && npm run check:prompt && npm run check:portability && npm test",
+    "gen:prompt": "node scripts/build-prompt-spec.mjs",
+    "check:prompt": "node scripts/build-prompt-spec.mjs --check"
   },
   "dependencies": {
     "@vinext/cloudflare": "^1.3.3",

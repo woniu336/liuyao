@@ -24,7 +24,7 @@ import {
   type LlmSettings,
 } from '@/lib/llm/settings';
 
-const EMPTY: LlmSettings = { provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', apiKey: '' };
+const EMPTY: LlmSettings = { provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', apiKey: '', thinking: 'disabled' };
 
 const FIELD =
   'h-10 w-full rounded-[3px] border border-[#D9CDB6] bg-white px-2.5 font-mono text-[12.5px] text-[#2F4438] outline-none transition-colors focus:border-[#9A7040]';

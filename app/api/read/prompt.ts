@@ -10,7 +10,7 @@
  */
 
 import type { ReadingFacts } from '@/lib/readings/types';
-import { quickRefBlock } from '@/lib/readings/specialties';
+import { PROMPT_SPEC } from '@/lib/readings/prompt-spec.generated';
 
 const SYSTEM_PROMPT = `# 你是谁
 你是一位六爻解卦者。熟悉《易冒》《黄金策》《增删卜易》《卜筮正宗》等通行法理，也清楚自己的边界：只作传统文化参考，不替代医疗、法律、财务的专业判断。
@@ -132,16 +132,17 @@ function liuyaoBrief(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): string {
 
 /** 六爻专用：系统提示与用户消息 */
 /**
- * 拼 prompt：SYSTEM_PROMPT（通用规则）+ 专项速查层（常驻）
+ * 拼 prompt：整份《断卦规范》（原版，不精简）+ 本次盘面事实
  *
- * 为什么不做关键词路由、也不让用户选：
- *   - 完整规范 141KB（≈4.5 万 token）不可能每次发，而输出只有 400–550 字，细则本来展不开；
- *   - 关键词对复合问句（"面试完顺便问财运"）与指代模糊必错，让用户选又多一步操作；
- *   - 所以常驻「每专项 2 行」速查层，由模型自己归类（可同时适用多个专项）。
- * 细则见 docs/prompt-liuyao.md 对应章，供详版/外部 Agent 使用。
+ * 为什么不路由、不精简、不让用户选：
+ *   - 专项规则要原版（宠物走失 8 步、婚姻 10 步…），压缩就会丢要点；
+ *   - 关键词对复合问句（"面试完顺便问财运"）必错，让用户选又多一步操作；
+ *   - 所以整份规范常驻 system（约 5.4 万字 ≈ 36k token），由模型自己按问句归类，
+ *     天然支持复合问题。规范正文见 docs/prompt-liuyao.md，构建期由
+ *     scripts/build-prompt-spec.mjs 内联成 prompt-spec.generated.ts（Workers 无 fs）。
  */
 export function buildLiuyaoPrompt(facts: Extract<ReadingFacts, { kind: 'liuyao' }>): { system: string; user: string } {
-  const system = SYSTEM_PROMPT + quickRefBlock();
+  const system = PROMPT_SPEC;
 
   const ask = '请按四段写出这一卦的解读。盘面已是定局，不必重排，也不要复述全部爻位。';
   return {

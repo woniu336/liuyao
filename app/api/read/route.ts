@@ -141,7 +141,9 @@ export async function POST(req: Request): Promise<Response> {
       body: JSON.stringify(
         buildChatRequestBody({
           model: config.model,
-          thinking: config.thinking,
+          // 整份规范约 36k token：若模型默认开思考，会把输出预算全吃掉（实测 content 为空、finish_reason=length）。
+          // 本产品只要 400–550 字正文，默认关闭思考；用户在「设置」里显式开启才传 enabled。
+          thinking: config.thinking ?? 'disabled',
           reasoningEffort: config.reasoningEffort,
           messages: [
             { role: 'system', content: system },

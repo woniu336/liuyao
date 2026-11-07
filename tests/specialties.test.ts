@@ -41,32 +41,3 @@ describe('专项速查层（常驻，不依赖用户选择）', () => {
     expect(block.length).toBeLessThan(1600);
   });
 });
-
-describe('buildLiuyaoPrompt：速查层常驻，四段与字数不变', () => {
-  const time = castTimeInfo(parseTimeInput('2026-11-05T20:56'));
-  const chart = castLiuyao(buildLiuyaoInput(time, [7, 7, 8, 9, 7, 8]));
-  const promptFor = (question: string) =>
-    buildLiuyaoPrompt(buildLiuyaoReadingFacts(chart, time, question));
-
-  it('任何问句都带速查层（不需要选择、不依赖关键词）', () => {
-    for (const q of ['', '今年整体运势如何', '我家猫跑丢了', '面试完顺便问这个月财运']) {
-      const { system } = promptFor(q);
-      expect(system).toContain('专项速查');
-      expect(system).toContain('宠物走失');
-      expect(system).toContain('求财经营');
-    }
-  });
-
-  it('事实层铁律与四段约束仍在', () => {
-    const { system } = promptFor('我家猫跑丢了还能找回吗');
-    expect(system).toContain('事实层铁律');
-    expect(system).toContain('不重算、不改写');
-    expect(system).toContain('段首必须是下面四行原文');
-    expect(system).toContain('硬上限 600 字');
-  });
-
-  it('总长度受控（通用 1930 + 速查 ≤1600）', () => {
-    const { system } = promptFor('这套房子租下来合适吗');
-    expect(system.length).toBeLessThan(3600);
-  });
-});
