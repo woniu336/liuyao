@@ -108,6 +108,16 @@ export default function SiteHeader({
               </>
             )}
             <span aria-hidden className="hidden h-4 w-px bg-[#C8BEA8] sm:block" />
+            <a
+              href="https://github.com/woniu336/liuyao"
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label="项目主页（GitHub）"
+              title="项目主页"
+              className="press flex h-8 items-center rounded-full border border-[#C3B79E] bg-[#FCF9F0]/70 px-3 font-song text-[12px] text-[#4A4438] no-underline transition-colors hover:border-[#9A7040] hover:text-[#8E6337]"
+            >
+              项目
+            </a>
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}

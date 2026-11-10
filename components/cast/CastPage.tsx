@@ -362,9 +362,18 @@ export default function CastPage() {
             </div>
 
             {/* 墨绿漆面 + 赭金双边按钮（移动端改由底部悬浮条承载） */}
-            <div className="mx-auto mt-5 hidden max-w-[300px] rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_7px_rgba(96,76,43,0.16)] sm:block">
-              <button type="button" disabled={rolling || complete} onClick={doToss} className="press h-[50px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[17px] font-medium tracking-[0.4em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60">
-                {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
+            <div className="mx-auto mt-5 hidden max-w-[360px] items-stretch gap-2.5 sm:flex">
+              <div className="flex-1 rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_7px_rgba(96,76,43,0.16)]">
+                <button type="button" disabled={rolling || complete} onClick={doToss} className="press h-[50px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[17px] font-medium tracking-[0.4em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60">
+                  {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSheet('manual')}
+                className="press h-[50px] w-[76px] shrink-0 self-center rounded-[4px] border border-[#9C7A48] bg-[#FBF7EC] font-song text-[13px] tracking-[0.14em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
+              >
+                指定
               </button>
             </div>
 
@@ -374,14 +383,6 @@ export default function CastPage() {
                   重新起卦
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setSheet('manual')}
-                className="press inline-flex h-9 items-center gap-1.5 rounded-[3px] border border-[#9C7A48] bg-[#FBF7EC] px-3 font-song text-[12px] tracking-[0.08em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
-              >
-                <PenLine size={13} strokeWidth={1.7} />
-                手动指定
-              </button>
             </div>
           </section>
         </div>
@@ -410,14 +411,23 @@ export default function CastPage() {
 
       {/* 移动端：起卦按钮悬浮在底部，单手可及 */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-[#D7CDB8] bg-[#F6F2E9]/95 px-4 pt-2.5 backdrop-blur-md sm:hidden">
-        <div className="mx-auto max-w-[420px] rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_10px_rgba(96,76,43,0.18)]">
+        <div className="mx-auto flex max-w-[420px] items-stretch gap-2.5">
+          <div className="flex-1 rounded-[6px] border border-[#9C7A48] p-[2px] shadow-[0_2px_10px_rgba(96,76,43,0.18)]">
+            <button
+              type="button"
+              disabled={rolling || complete}
+              onClick={doToss}
+              className="press h-[48px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[16px] font-medium tracking-[0.36em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
+            </button>
+          </div>
           <button
             type="button"
-            disabled={rolling || complete}
-            onClick={doToss}
-            className="press h-[48px] w-full rounded-[4px] border border-[#D8C392]/50 bg-[linear-gradient(180deg,#456557_0%,#29453B_100%)] font-song text-[16px] font-medium tracking-[0.36em] text-[#F5E9CB] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-[#223D34] disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => setSheet('manual')}
+            className="press h-[48px] w-[72px] shrink-0 self-center rounded-[4px] border border-[#9C7A48] bg-[#FBF7EC] font-song text-[13px] tracking-[0.14em] text-[#3F4A42] shadow-[0_2px_7px_rgba(96,76,43,0.14)] transition-colors hover:border-[#8E6337] hover:text-[#8E6337]"
           >
-            {rolling ? '铜钱翻落' : complete ? '六爻已备' : '掷钱起爻'}
+            指定
           </button>
         </div>
       </div>
